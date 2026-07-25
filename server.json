@@ -1,17 +1,17 @@
 {
 	"$schema": "https://static.modelcontextprotocol.io/schemas/2025-12-11/server.schema.json",
-	"name": "io.github.chrisdoc/hevy-mcp",
+	"name": "io.github.PV-Bhat/hevy-agents-mcp",
 	"title": "Hevy MCP Server",
-	"description": "MCP server for managing workouts, routines, and exercise data through the Hevy API",
+	"description": "Query your entire Hevy training history as a local SQL database, and manage routines and exercise templates.",
 	"repository": {
-		"url": "https://github.com/chrisdoc/hevy-mcp",
+		"url": "https://github.com/PV-Bhat/hevy-agents-mcp",
 		"source": "github"
 	},
 	"version": "3.4.1",
 	"packages": [
 		{
 			"registryType": "npm",
-			"identifier": "hevy-mcp",
+			"identifier": "hevy-agents-mcp",
 			"version": "3.4.1",
 			"transport": {
 				"type": "stdio"

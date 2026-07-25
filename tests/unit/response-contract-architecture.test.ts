@@ -14,14 +14,15 @@ const definitionFiles = [
 	"user.ts",
 	"workflows.ts",
 	"routine-discovery.ts",
+	"warehouse.ts",
 ] as const;
 const toolSources = definitionFiles
 	.map((file) => readFileSync(new URL(file, toolsDirectory), "utf8"))
 	.join("\n");
 describe("tool response architecture", () => {
 	it("requires every definition to provide a response contract", () => {
-		expect(toolSources.match(/responseContract:/g)).toHaveLength(25);
-		expect(toolSources.match(/execute:/g)).toHaveLength(25);
+		expect(toolSources.match(/responseContract:/g)).toHaveLength(27);
+		expect(toolSources.match(/execute:/g)).toHaveLength(27);
 		expect(toolSources).not.toMatch(/return respond\(/);
 		expect(toolSources).not.toMatch(
 			/create(?:Json|StructuredJson|Empty|StructuredEmpty|Text)Response/,

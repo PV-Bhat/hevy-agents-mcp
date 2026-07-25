@@ -11,8 +11,6 @@ const EXPECTED_TOOL_NAMES = [
 	"get-workout",
 	"get-workout-count",
 	"get-workout-events",
-	"create-workout",
-	"update-workout",
 	"get-routines",
 	"get-routine",
 	"create-routine",
@@ -102,5 +100,24 @@ describe("registerHevyTools", () => {
 		const summary = tools.find(({ name }) => name === "get-training-summary");
 
 		expect(summary?.outputSchema).toBeDefined();
+	});
+});
+
+// Workout mutation is removed on purpose in this fork: the server exists to
+// analyse a training record, and a tool that cannot alter that record is
+// easier to trust. Guard against it being reintroduced by an upstream merge.
+describe("workout mutation is absent by design", () => {
+	it("registers no tool that can create or update a workout", () => {
+		const names = hevyToolDefinitions.map((definition) => definition.name);
+		expect(names).not.toContain("create-workout");
+		expect(names).not.toContain("update-workout");
+	});
+
+	it("exposes no write tool under the workouts feature", () => {
+		const workoutWrites = hevyToolDefinitions.filter(
+			(definition) =>
+				definition.feature === "workouts" && definition.kind === "write",
+		);
+		expect(workoutWrites).toEqual([]);
 	});
 });

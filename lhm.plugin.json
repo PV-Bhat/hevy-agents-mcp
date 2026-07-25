@@ -1,13 +1,19 @@
 {
-	"author": "Christoph Kieslich",
+	"author": "Pruthvi Bhat",
 	"authorUrl": "https://github.com/chrisdoc",
 	"category": "health-wellness",
 	"cloudEndpoint": "https://hevy.chrisdoc.dev/mcp",
-	"description": "Manage Hevy workouts, routines, folders, body measurements, and exercise templates from MCP clients through the Hevy API.",
-	"homepage": "https://github.com/chrisdoc/hevy-mcp",
+	"description": "Agent-native MCP server for Hevy: your complete training history as a queryable local database, plus safe read/write access to routines and templates.",
+	"homepage": "https://github.com/PV-Bhat/hevy-agents-mcp",
 	"icon": "https://github.com/chrisdoc.png",
 	"identifier": "chrisdoc-hevy-mcp",
-	"name": "Hevy MCP Server",
-	"tags": ["hevy", "fitness", "workouts", "health", "mcp"],
+	"name": "Hevy Agents MCP",
+	"tags": [
+		"hevy",
+		"fitness",
+		"workouts",
+		"health",
+		"mcp"
+	],
 	"version": "3.3.0"
 }

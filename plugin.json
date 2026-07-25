@@ -1,7 +1,7 @@
 {
 	"$schema": "https://antigravity.google/schemas/v1/plugin.json",
-	"name": "hevy-mcp",
+	"name": "hevy-agents-mcp",
 	"title": "Hevy MCP Server",
-	"description": "Manage Hevy workouts, routines, folders, body measurements, and exercise templates through the Hevy API.",
+	"description": "Agent-native MCP server for Hevy: your complete training history as a queryable local database, plus safe read/write access to routines and templates.",
 	"version": "3.4.1"
 }

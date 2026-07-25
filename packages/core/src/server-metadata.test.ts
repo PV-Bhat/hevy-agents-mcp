@@ -11,7 +11,7 @@ describe.sequential("server metadata", () => {
 		vi.resetModules();
 		const metadata = await import("./server-metadata.js");
 
-		expect(metadata.SERVER_NAME).toBe("hevy-mcp");
+		expect(metadata.SERVER_NAME).toBe("hevy-agents-mcp");
 		expect(metadata.SERVER_VERSION).toBe("dev");
 	});
 
