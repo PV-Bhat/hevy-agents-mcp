@@ -6,6 +6,7 @@ export const HEVY_TOOL_FEATURES = [
 	"folders",
 	"profile",
 	"workflows",
+	"warehouse",
 ] as const;
 
 export type HevyToolFeature = (typeof HEVY_TOOL_FEATURES)[number];
@@ -21,6 +22,8 @@ export const MCP_TOOL_OPERATIONS = [
 	"update",
 	"count",
 	"sync",
+	"query",
+	"describe",
 ] as const;
 
 export type McpToolOperation = (typeof MCP_TOOL_OPERATIONS)[number];

@@ -1129,3 +1129,114 @@ export const updateBodyMeasurementResponse = defineJsonResponseContract(
 	}),
 	() => ({ itemCountBucket: "1" }),
 );
+
+/* ------------------------------------------------------------------ */
+/* Warehouse (local analytical copy) response contracts               */
+/* ------------------------------------------------------------------ */
+
+const trainingQueryOutputSchema = {
+	rowCount: z.number(),
+	columns: z.array(z.string()),
+	truncated: z.boolean(),
+	format: z.string(),
+	rows: z.array(z.record(z.string(), z.unknown())).optional(),
+	notes: z.array(z.string()).optional(),
+	/**
+	 * Set when the query was not run. A rejected query is an expected,
+	 * agent-recoverable outcome rather than a server fault, so the reason is
+	 * returned verbatim: an agent that is told "no such column: bodyweight"
+	 * can fix its SQL, whereas a generic failure message makes it retry blind.
+	 */
+	rejected: z.boolean().optional(),
+	rejectionReason: z.string().optional(),
+} as const;
+
+export interface TrainingQueryResultData {
+	rows: Record<string, unknown>[];
+	rowCount: number;
+	columns: string[];
+	truncated: boolean;
+	format: string;
+	formatted: string;
+	notes?: string[];
+	rejected?: boolean;
+	rejectionReason?: string;
+}
+
+export const trainingQueryResponse = defineStructuredResponseContract({
+	outputSchema: trainingQueryOutputSchema,
+	normalize: (data: TrainingQueryResultData) => ({
+		rowCount: data.rowCount,
+		columns: data.columns,
+		truncated: data.truncated,
+		format: data.format,
+		...(data.rejected
+			? { rejected: true, rejectionReason: data.rejectionReason }
+			: {}),
+		...(data.format === "json" && !data.rejected ? { rows: data.rows } : {}),
+		...(data.notes ? { notes: data.notes } : {}),
+	}),
+	legacyJson: (output) => output,
+	// Non-JSON formats are far cheaper as text than as nested structure.
+	text: (data) =>
+		data.rejected
+			? `Query not run. ${data.rejectionReason}`
+			: data.format === "json"
+				? undefined
+				: data.formatted || "(no rows matched)",
+	additionalText: (data) => data.notes ?? [],
+	telemetry: (data) => ({ itemCountBucket: bucketCount(data.rowCount) }),
+});
+
+const schemaDescriptionOutputSchema = {
+	schema: z.string(),
+} as const;
+
+export const schemaDescriptionResponse = defineStructuredResponseContract({
+	outputSchema: schemaDescriptionOutputSchema,
+	normalize: (text: string) => ({ schema: text }),
+	legacyJson: (output) => output,
+	text: (text) => text,
+});
+
+const warehouseStatusOutputSchema = {
+	configured: z.boolean(),
+	workouts: z.number().optional(),
+	sets: z.number().optional(),
+	firstDate: z.string().nullable().optional(),
+	lastDate: z.string().nullable().optional(),
+	backfillComplete: z.boolean().optional(),
+	lastSyncedAt: z.string().nullable().optional(),
+	timezone: z.string().nullable().optional(),
+	staleDays: z.number().nullable().optional(),
+} as const;
+
+export interface WarehouseStatusData {
+	configured: boolean;
+	workouts?: number;
+	sets?: number;
+	firstDate?: string | null;
+	lastDate?: string | null;
+	backfillComplete?: boolean;
+	lastSyncedAt?: string | null;
+	timezone?: string | null;
+	staleDays?: number | null;
+}
+
+export const warehouseStatusResponse = defineStructuredResponseContract({
+	outputSchema: warehouseStatusOutputSchema,
+	normalize: (data: WarehouseStatusData) => data,
+	legacyJson: (output) => output,
+	telemetry: (data) => ({ itemCountBucket: bucketCount(data.workouts ?? 0) }),
+});
+
+const syncResultOutputSchema = {
+	mode: z.string(),
+	details: z.record(z.string(), z.unknown()),
+} as const;
+
+export const warehouseSyncResponse = defineStructuredResponseContract({
+	outputSchema: syncResultOutputSchema,
+	normalize: (data: { mode: string; details: Record<string, unknown> }) => data,
+	legacyJson: (output) => output,
+});

@@ -41,7 +41,8 @@
 		"@sentry/node": "^10.58.0",
 		"@sentry/opentelemetry": "^10.58.0",
 		"semver": "^7.8.5",
-		"zod": "^4.4.3"
+		"zod": "^4.4.3",
+		"@hevy-mcp/warehouse": "*"
 	},
 	"devDependencies": {
 		"@hevy-mcp/core": "*",

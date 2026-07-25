@@ -13,6 +13,10 @@ export {
 	type ToolObserver,
 	type ToolResultObservation,
 } from "./observation.js";
+export {
+	WAREHOUSE_NOT_CONFIGURED_ERROR,
+	type WarehouseAccess,
+} from "./tools/tool-runtime.js";
 export { createSafeErrorDiagnostic } from "./utils/safe-error-diagnostic.js";
 export { ErrorType } from "./utils/error-policy.js";
 export {
