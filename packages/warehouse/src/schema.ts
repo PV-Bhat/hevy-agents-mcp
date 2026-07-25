@@ -102,6 +102,13 @@ CREATE TABLE IF NOT EXISTS exercise_group (
 	id INTEGER PRIMARY KEY AUTOINCREMENT,
 	name TEXT NOT NULL UNIQUE
 );
+
+-- Share of bodyweight moved by a movement, matched on title prefix.
+-- A modeling assumption, seeded with defaults and meant to be edited.
+CREATE TABLE IF NOT EXISTS bodyweight_fraction (
+	pattern TEXT PRIMARY KEY,
+	fraction REAL NOT NULL CHECK (fraction > 0 AND fraction <= 1.5)
+);
 CREATE TABLE IF NOT EXISTS exercise_group_member (
 	group_id INTEGER NOT NULL REFERENCES exercise_group(id) ON DELETE CASCADE,
 	template_id TEXT NOT NULL,
@@ -145,15 +152,31 @@ WHERE s.set_type IS NULL OR s.set_type <> 'warmup';
 `;
 
 import type { SqlDriver } from "./driver.js";
+import { BODYWEIGHT_FRACTIONS, SEMANTIC_VIEWS_DDL } from "./views.js";
 
-export function initSchema(db: SqlDriver): void {
+export function initSchema(db: SqlDriver, timezone?: string): void {
 	db.exec(SCHEMA_DDL);
+	// Seed defaults without clobbering user edits.
+	for (const [pattern, fraction] of Object.entries(BODYWEIGHT_FRACTIONS)) {
+		db.run(
+			"INSERT OR IGNORE INTO bodyweight_fraction(pattern, fraction) VALUES (?,?)",
+			[pattern, fraction],
+		);
+	}
 	db.exec(VIEWS_DDL);
+	db.exec(SEMANTIC_VIEWS_DDL);
 	db.run(
 		"INSERT INTO meta(key, value) VALUES('schema_version', ?) " +
 			"ON CONFLICT(key) DO UPDATE SET value = excluded.value",
 		[String(SCHEMA_VERSION)],
 	);
+	if (timezone) {
+		db.run(
+			"INSERT INTO meta(key, value) VALUES('timezone', ?) " +
+				"ON CONFLICT(key) DO UPDATE SET value = excluded.value",
+			[timezone],
+		);
+	}
 	db.run(
 		"INSERT INTO sync_state(id, backfill_complete) VALUES(1, 0) " +
 			"ON CONFLICT(id) DO NOTHING",
