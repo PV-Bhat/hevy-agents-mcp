@@ -191,3 +191,31 @@ describe("describe-training-schema", () => {
 		expect(text).toContain("volume_basis");
 	});
 });
+
+describe("modeling assumptions are disclosed", () => {
+	it("lists the live bodyweight fractions and how to change them", async () => {
+		const db = seededWarehouse();
+		const text = (await tool("describe-training-schema").execute(
+			runtimeWith({ read: db }),
+			{} as never,
+		)) as string;
+		expect(text).toContain("MODELING ASSUMPTIONS");
+		expect(text).toContain("Epley");
+		expect(text).toContain("Secondary muscles receive 0.5");
+		expect(text).toContain("Pull Up");
+		expect(text).toContain("set-fraction");
+	});
+
+	it("reflects an edited fraction rather than the source default", async () => {
+		const db = seededWarehouse();
+		db.run(
+			"UPDATE bodyweight_fraction SET fraction = 0.71 WHERE pattern = 'Push Up'",
+		);
+		const text = (await tool("describe-training-schema").execute(
+			runtimeWith({ read: db }),
+			{} as never,
+		)) as string;
+		expect(text).toContain("0.71  Push Up");
+		expect(text).not.toContain("0.64  Push Up");
+	});
+});

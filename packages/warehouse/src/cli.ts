@@ -141,11 +141,88 @@ async function sync(): Promise<void> {
 	}
 }
 
+/** List the bodyweight fractions currently in effect. */
+async function fractions(): Promise<void> {
+	const db = createNodeDriver(argValue("--db", "hevy-warehouse.db"), {
+		readOnly: true,
+	});
+	try {
+		const rows = db.all<{ pattern: string; fraction: number }>(
+			"SELECT pattern, fraction FROM bodyweight_fraction ORDER BY fraction DESC, pattern",
+		);
+		console.log(
+			"Share of bodyweight each movement is modelled as loading.\n" +
+				"Matched against the longest matching exercise-title prefix.\n",
+		);
+		for (const row of rows) {
+			console.log(`  ${row.fraction.toFixed(2)}  ${row.pattern}`);
+		}
+		console.log(
+			`\n${rows.length} entries. Change one with:\n` +
+				'  cli.ts set-fraction "Push Up" 0.7\n' +
+				"Movements with no entry contribute no volume when logged without weight.",
+		);
+	} finally {
+		db.close();
+	}
+}
+
+/** Set or add one bodyweight fraction. */
+async function setFraction(): Promise<void> {
+	const [, , , pattern, rawValue] = process.argv;
+	const fraction = Number(rawValue);
+	if (!pattern || !Number.isFinite(fraction)) {
+		console.error('usage: cli.ts set-fraction "<title prefix>" <0-1.5>');
+		process.exit(1);
+	}
+	if (fraction <= 0 || fraction > 1.5) {
+		console.error("fraction must be greater than 0 and at most 1.5");
+		process.exit(1);
+	}
+	const db = createNodeDriver(argValue("--db", "hevy-warehouse.db"));
+	try {
+		const [previous] = db.all<{ fraction: number }>(
+			"SELECT fraction FROM bodyweight_fraction WHERE pattern = ?",
+			[pattern],
+		);
+		db.run(
+			"INSERT INTO bodyweight_fraction(pattern, fraction) VALUES (?,?) " +
+				"ON CONFLICT(pattern) DO UPDATE SET fraction = excluded.fraction",
+			[pattern, fraction],
+		);
+		console.log(
+			previous
+				? `updated "${pattern}": ${previous.fraction} -> ${fraction}`
+				: `added "${pattern}": ${fraction}`,
+		);
+		const [affected] = db.all<{ sets: number }>(
+			`SELECT COUNT(*) AS sets FROM workout_set ws
+			 JOIN workout_exercise we
+			   ON we.workout_id = ws.workout_id AND we.exercise_index = ws.exercise_index
+			 WHERE COALESCE(we.title, '') LIKE ? || '%'`,
+			[pattern],
+		);
+		console.log(
+			`${affected.sets} logged sets match this prefix; volume recomputes on next server start.`,
+		);
+	} finally {
+		db.close();
+	}
+}
+
 const command = process.argv[2];
-const run = command === "probe" ? probe : command === "sync" ? sync : null;
+const commands: Record<string, () => Promise<void>> = {
+	probe,
+	sync,
+	fractions,
+	"set-fraction": setFraction,
+};
+const run = commands[command ?? ""];
 
 if (!run) {
-	console.error("usage: cli.ts <probe|sync> [--db path] [--tz zone]");
+	console.error(
+		"usage: cli.ts <probe|sync|fractions|set-fraction> [--db path] [--tz zone]",
+	);
 	process.exit(1);
 }
 

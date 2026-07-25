@@ -34,6 +34,18 @@ export interface SchemaDescription {
 	relations: RelationDoc[];
 	examples: { question: string; sql: string }[];
 	caveats: string[];
+	/**
+	 * The live modeling assumptions, read from the database rather than from
+	 * source constants. Anyone reading a number this server produced can see
+	 * the exact values that produced it, and how to change them.
+	 */
+	assumptions: {
+		secondaryMuscleCredit: number;
+		e1rmFormula: string;
+		e1rmValidRepRange: string;
+		bodyweightFractions: { pattern: string; fraction: number }[];
+		howToChange: string[];
+	};
 }
 
 const CONVENTIONS = [
@@ -308,12 +320,31 @@ export function describeSchema(db: SqlDriver): SchemaDescription {
 		"SELECT value FROM meta WHERE key = 'timezone'",
 	);
 
+	const bodyweightFractions = db.all<{
+		pattern: string;
+		fraction: number;
+	}>(
+		"SELECT pattern, fraction FROM bodyweight_fraction ORDER BY fraction DESC, pattern",
+	);
+
 	return {
 		dataset: { ...stats, timezone: tz?.value ?? null },
 		conventions: CONVENTIONS,
 		relations: RELATIONS,
 		examples: EXAMPLES,
 		caveats: CAVEATS,
+		assumptions: {
+			secondaryMuscleCredit: 0.5,
+			e1rmFormula: "Epley: weight * (1 + reps / 30)",
+			e1rmValidRepRange: "1-12 reps, load above zero",
+			bodyweightFractions,
+			howToChange: [
+				"Bodyweight fractions live in the bodyweight_fraction table and are matched against the longest exercise-title prefix.",
+				"Change one with the sync CLI: `hevy-warehouse set-fraction \"Push Up\" 0.7`, or list them with `hevy-warehouse fractions`.",
+				"Views recompute on the next server start, so no re-sync from Hevy is needed after a change.",
+				"The secondary-muscle credit of 0.5 is fixed in the v_set_muscle view. To use a different weighting in one query, read is_primary and apply your own factor rather than credited_volume_kg.",
+			],
+		},
 	};
 }
 
@@ -337,6 +368,20 @@ export function renderSchemaText(description: SchemaDescription): string {
 			);
 		}
 	}
+	const a = description.assumptions;
+	lines.push(
+		"",
+		"MODELING ASSUMPTIONS (chosen values, not measurements — state them when reporting derived numbers)",
+		`- Estimated 1RM: ${a.e1rmFormula}, valid for ${a.e1rmValidRepRange}.`,
+		`- Secondary muscles receive ${a.secondaryMuscleCredit} of the volume credit; primary receives 1.0.`,
+		"- Bodyweight fractions, the share of bodyweight each movement loads:",
+	);
+	for (const f of a.bodyweightFractions) {
+		lines.push(`    ${f.fraction.toFixed(2)}  ${f.pattern}`);
+	}
+	lines.push("  Changing these:");
+	for (const h of a.howToChange) lines.push(`    - ${h}`);
+
 	lines.push("", "CAVEATS");
 	for (const c of description.caveats) lines.push(`- ${c}`);
 	lines.push("", "EXAMPLES");

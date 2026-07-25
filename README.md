@@ -331,6 +331,71 @@ your machine and receives the key through its child-process environment.
 In either mode, read tools retrieve data; mutation tools create or replace data
 only when your assistant calls them.
 
+## Training warehouse (lifetime analysis)
+
+Hevy's API returns at most 10 workouts per request and offers no date filter or
+bulk export, so answering "how has my bench progressed since 2021" through the
+API alone costs one request per ten sessions and cannot aggregate at all.
+
+The warehouse solves this by keeping a local SQLite copy of the full history and
+exposing it as SQL:
+
+```text
+Hevy API  →  read-only sync  →  local SQLite  →  run-training-query  →  your agent
+```
+
+Enable it by pointing the server at a database file:
+
+```bash
+HEVY_WAREHOUSE_DB=./hevy-warehouse.db
+```
+
+Four extra tools appear when it is configured, and none when it is not:
+
+| Tool | Purpose |
+| --- | --- |
+| `describe-training-schema` | Tables, views, conventions, caveats, worked examples, and the live modeling assumptions |
+| `run-training-query` | A single read-only `SELECT` over the whole history |
+| `get-warehouse-status` | Coverage and freshness |
+| `sync-training-history` | Refresh from Hevy |
+
+**The sync path cannot write to your Hevy account.** Every request goes through a
+client that throws on any method other than GET, and the query connection is
+opened read-only so SQLite itself refuses writes. The worst case for a bad query
+is a damaged local copy, which a re-sync rebuilds.
+
+### Modeling assumptions
+
+Some figures are **modelled, not measured**, and the choices change the numbers
+materially. They are listed in full by `describe-training-schema`, so any agent
+reporting a figure can also state how it was derived.
+
+- **Warmup sets** are excluded from all volume, PR and one-rep-max maths.
+- **Volume** is `NULL`, never `0`, where weight × reps is meaningless — cardio,
+  duration and unloaded movements. Read `volume_basis` alongside `volume_kg`.
+- **Estimated 1RM** uses Epley, `weight × (1 + reps / 30)`, restricted to 1–12
+  reps where it is defensible. Note that a true 1RM PR, a rep-max PR and a best
+  estimated 1RM are three different things that disagree.
+- **Muscle credit** gives the primary muscle 1.0 and each secondary muscle 0.5.
+  `is_primary` is exposed on every row, so a query can apply any other weighting.
+- **Bodyweight movements** are loaded as `bodyweight × fraction`, where the
+  fraction is per-exercise: a pull-up moves ~all of you, a push-up around two
+  thirds, a crunch far less. Without this, bodyweight work either scores zero
+  volume or lets a 25-rep crunch outrank a heavy squat.
+
+Inspect and change the fractions — no re-sync needed, views recompute on the
+next server start:
+
+```bash
+npx tsx packages/warehouse/src/cli.ts fractions
+npx tsx packages/warehouse/src/cli.ts set-fraction "Push Up" 0.7
+```
+
+> Note: the live Hevy API returns `exercise_type` values that differ from its
+> published OpenAPI spec (`bodyweight_weighted` and `bodyweight_assisted` rather
+> than the documented `*_reps` names, plus `steps_duration` and
+> `floors_duration`). The warehouse follows the live API.
+
 ## Guided prompts
 
 These server-provided MCP prompts coordinate common multi-step workflows:
