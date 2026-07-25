@@ -174,7 +174,7 @@ forms are unsupported and insecure.
 
 ### Node.js Version
 
-- **Supported:** Node.js >= 24
+- **Supported:** Node.js >= 22.5 (required by `node:sqlite`, used by the warehouse). Development targets Node.js >= 24.
 - **Recommended:** Use the exact version pinned in `.nvmrc` (CI uses this exact version)
 - If you use `nvm`, run `nvm use` in the repo root to match `.nvmrc`
 - Use `node --version` to verify current version

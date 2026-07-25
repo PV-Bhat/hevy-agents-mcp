@@ -1,5 +1,5 @@
 ---
-"hevy-mcp": major
+"hevy-agents-mcp": major
 ---
 
 The Node package now publishes a runtime-neutral MCP server behind

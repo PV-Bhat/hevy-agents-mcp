@@ -217,7 +217,9 @@ SELECT
 	w.title,
 	w.duration_seconds,
 	COUNT(DISTINCT s.exercise_index) AS exercise_count,
-	COUNT(*) AS working_set_count,
+	-- COUNT(s.workout_id), not COUNT(*): the LEFT JOIN yields one null row for
+	-- a session with no working sets, and COUNT(*) would report that as 1.
+	COUNT(s.workout_id) AS working_set_count,
 	SUM(s.volume_kg) AS volume_kg,
 	SUM(s.reps) AS total_reps,
 	AVG(s.rpe) AS avg_rpe

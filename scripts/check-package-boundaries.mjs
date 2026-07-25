@@ -13,9 +13,13 @@ export const packageRules = new Map([
 		{
 			allowed: new Map(),
 			forbidden: ["@cloudflare/", "cloudflare:", "@sentry/", "@opentelemetry/"],
-			// node:sqlite lives behind the package root; the portable entry
-			// point is imported by core and, later, the Cloudflare Worker.
-			rejectBuiltins: false,
+			// The /portable entry point is imported by core and, later, the
+			// Cloudflare Worker, so it must stay free of Node builtins. Only
+			// these two files may reach for them. Expressed as an allowlist so
+			// a newly added file inherits the strict rule by default rather
+			// than silently gaining Node access.
+			rejectBuiltins: true,
+			builtinsAllowedIn: ["src/node-driver.ts", "src/cli.ts"],
 			rejectDynamicImports: true,
 		},
 	],
@@ -216,8 +220,23 @@ export function inspectFileWithCompiler(file) {
 	return inspectFilesWithCompiler([resolve(file)]).get(resolve(file));
 }
 
+/**
+ * Separator-normalized containment check.
+ *
+ * resolve() yields backslashes on Windows, so comparing against a
+ * forward-slash-suffixed prefix made every relative import look like it
+ * escaped its package. The check then reported failures for node and worker
+ * regardless of the actual import graph, which made the whole guard
+ * unrunnable locally on Windows.
+ */
 function isInside(path, directory) {
-	return path === directory || path.startsWith(`${directory}/`);
+	const normalize = (value) => value.replaceAll("\\", "/");
+	const normalizedPath = normalize(path);
+	const normalizedDirectory = normalize(directory);
+	return (
+		normalizedPath === normalizedDirectory ||
+		normalizedPath.startsWith(`${normalizedDirectory}/`)
+	);
 }
 
 export function findImportViolations({
@@ -262,8 +281,13 @@ export function findImportViolations({
 				);
 			}
 		}
+		const builtinsPermittedHere = (rule.builtinsAllowedIn ?? []).some(
+			(allowedFile) =>
+				relative(packageRoot, file).replaceAll("\\", "/") === allowedFile,
+		);
 		if (
 			rule.rejectBuiltins &&
+			!builtinsPermittedHere &&
 			(builtinModules.includes(specifier) || specifier.startsWith("node:"))
 		) {
 			failures.push(

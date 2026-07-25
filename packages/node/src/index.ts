@@ -33,18 +33,25 @@ const version = serviceVersion;
 
 const HELP_TEXT = [
 	"Usage:",
-	"  hevy-mcp [options]",
+	"  hevy-agents-mcp [options]",
 	"",
 	"Options:",
 	"  -h, --help                 Show this help message and exit",
 	"  -v, --version              Show version and exit",
 	"",
 	"Environment:",
-	"  HEVY_API_KEY=<api-key>     Hevy API key from Hevy app settings",
+	"  HEVY_API_KEY=<api-key>     Hevy API key from Hevy app settings (required)",
+	"  HEVY_WAREHOUSE_DB=<path>   SQLite file holding a local copy of your full",
+	"                             training history. Set this to enable the SQL",
+	"                             query tools; omit it to run as a plain",
+	"                             pass-through connector. Needs Node >= 22.5.",
+	"  HEVY_WAREHOUSE_TZ=<zone>   IANA timezone for day and week bucketing",
+	"                             (default: system zone)",
 	"  HEVY_MCP_DEBUG=1           Enable verbose diagnostics on stderr",
 	"",
 	"Examples:",
-	"  HEVY_API_KEY=your-key npx hevy-mcp",
+	"  HEVY_API_KEY=your-key npx hevy-agents-mcp",
+	"  HEVY_API_KEY=your-key HEVY_WAREHOUSE_DB=./hevy.db npx hevy-agents-mcp",
 ].join("\n");
 
 function getCliAction(args: string[]): "start" | "version" | "help" {

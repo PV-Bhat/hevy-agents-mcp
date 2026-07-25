@@ -1,5 +1,5 @@
 ---
-"hevy-mcp": minor
+"hevy-agents-mcp": major
 ---
 
 Add an optional local training warehouse for lifetime analysis.
@@ -33,4 +33,11 @@ published OpenAPI spec (`bodyweight_weighted` and `bodyweight_assisted` rather
 than the documented `*_reps` names, plus `steps_duration` and
 `floors_duration`). The warehouse follows the live API.
 
-Requires Node >= 22.5 for `node:sqlite`. Pass-through mode is unaffected.
+**Breaking:** `create-workout` and `update-workout` are removed. This server
+exists to analyse a training record, and a tool that cannot alter that record
+is easier to trust. Routine, routine-folder, exercise-template and
+body-measurement writes are unaffected, since those are additive rather than
+destructive to logged history. Callers that logged or edited workouts through
+this server must use the Hevy app or upstream `hevy-mcp`.
+
+**Breaking:** requires Node >= 22.5 for the built-in `node:sqlite` module.

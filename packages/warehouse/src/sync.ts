@@ -431,3 +431,75 @@ export async function syncBodyMeasurements(
 	}
 	return count;
 }
+
+export interface RunSyncOptions extends SyncOptions {
+	/** full re-reads everything and reconciles deletions; auto applies the event feed. */
+	mode?: "auto" | "full";
+	onStep?: (message: string) => void;
+}
+
+export interface RunSyncResult {
+	timezone: string;
+	templates: number;
+	bodyMeasurements: number;
+	backfill?: { workouts: number; pages: number; removed: number };
+	incremental?: { updated: number; deleted: number };
+	totals: { workouts: number; sets: number };
+}
+
+/**
+ * The one sync orchestration, shared by the CLI and the MCP server.
+ *
+ * These previously existed as two near-identical copies that drifted: only one
+ * gained the timezone-recompute step, and that divergence is how a missing
+ * import reached main. One caller-agnostic entry point removes the class of
+ * bug rather than the instance.
+ */
+export async function runSync(
+	db: SqlDriver,
+	http: ReadOnlyHttp,
+	options: RunSyncOptions,
+): Promise<RunSyncResult> {
+	const { mode = "auto", onStep, ...syncOptions } = options;
+	const step = onStep ?? (() => {});
+
+	step("syncing exercise templates");
+	const templates = await syncTemplates(db, http);
+
+	const [state] = db.all<{ backfill_complete: number }>(
+		"SELECT backfill_complete FROM sync_state WHERE id = 1",
+	);
+	if (mode === "full") {
+		db.run(
+			"UPDATE sync_state SET backfill_complete = 0, last_backfill_page = NULL WHERE id = 1",
+		);
+	}
+
+	const result: RunSyncResult = {
+		timezone: syncOptions.timezone,
+		templates,
+		bodyMeasurements: 0,
+		totals: { workouts: 0, sets: 0 },
+	};
+
+	if (mode === "full" || !state?.backfill_complete) {
+		step(mode === "full" ? "re-reading full history" : "backfilling history");
+		result.backfill = await backfill(db, http, {
+			...syncOptions,
+			reconcileDeletes: mode === "full",
+		});
+	} else {
+		step("applying changes since last sync");
+		result.incremental = await incremental(db, http, syncOptions);
+	}
+
+	step("syncing body measurements");
+	result.bodyMeasurements = await syncBodyMeasurements(db, http);
+
+	const [totals] = db.all<{ workouts: number; sets: number }>(
+		`SELECT (SELECT COUNT(*) FROM workout) AS workouts,
+		        (SELECT COUNT(*) FROM workout_set) AS sets`,
+	);
+	result.totals = totals;
+	return result;
+}

@@ -1,3 +1,8 @@
+/**
+ * Lives in packages/node, not core: these tests drive the warehouse tools
+ * against a real node:sqlite database, and core must stay free of Node
+ * builtins so the Cloudflare Worker can bundle it.
+ */
 import { describe, expect, it } from "vitest";
 import {
 	createNodeDriver,
@@ -5,9 +10,12 @@ import {
 	upsertWorkout,
 	type SqlDriver,
 } from "@hevy-mcp/warehouse";
-import { warehouseToolDefinitions } from "./warehouse.js";
-import type { ToolRuntime, WarehouseAccess } from "./tool-runtime.js";
-import { trainingQueryResponse } from "../utils/response-formatter.js";
+import {
+	trainingQueryResponse,
+	warehouseToolDefinitions,
+	type ToolRuntime,
+	type WarehouseAccess,
+} from "@hevy-mcp/core";
 
 function seededWarehouse(): SqlDriver {
 	const db = createNodeDriver(":memory:");
@@ -132,12 +140,13 @@ describe("run-training-query", () => {
 });
 
 describe("get-warehouse-status", () => {
-	it("reports not configured when no warehouse is attached", async () => {
-		const result = (await tool("get-warehouse-status").execute(
-			runtimeWith(undefined),
-			{} as never,
-		)) as { configured: boolean };
-		expect(result.configured).toBe(false);
+	// These tools only register when a warehouse exists, so every one of them
+	// reaches for it through getWarehouse(), which throws rather than
+	// returning a half-answer.
+	it("throws rather than reporting a half-answer with no warehouse", async () => {
+		await expect(
+			tool("get-warehouse-status").execute(runtimeWith(undefined), {} as never),
+		).rejects.toThrow(/no warehouse/);
 	});
 
 	it("reports coverage when a warehouse is attached", async () => {

@@ -30,7 +30,11 @@ export {
 	upsertWorkout,
 	deleteWorkout,
 	localDateOf,
+	recomputeLocalDates,
+	runSync,
 	type SyncOptions,
+	type RunSyncOptions,
+	type RunSyncResult,
 } from "./sync.js";
 export {
 	runQuery,

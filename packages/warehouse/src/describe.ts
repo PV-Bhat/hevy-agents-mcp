@@ -61,6 +61,7 @@ const CONVENTIONS = [
 
 const CAVEATS = [
 	"Personal records come in three distinct flavours and they disagree: heaviest ever single (MAX(weight_kg)), rep-max at a given rep count (v_rep_max_pr), and best estimated 1RM (MAX(e1rm_kg)). Say which one you mean.",
+	"v_rep_max_pr ranks by the logged weight_kg, not effective load, so for bodyweight movements it reflects only added weight. e1rm_kg uses effective load. Do not compare the two for the same bodyweight exercise.",
 	"Exercise substitutions are separate template_ids: 'Bench Press (Barbell)' and 'Bench Press (Dumbbell)' will not aggregate together unless grouped via exercise_group.",
 	"Bodyweight-based loads depend on body_measurement history; effective_load_kg is NULL for sessions before the first recorded bodyweight.",
 	"A small number of historical exercises reference templates deleted from the Hevy catalog; those rows have a NULL exercise_type and so a NULL volume_kg. exercise_title is still populated.",
@@ -157,7 +158,8 @@ const RELATIONS: RelationDoc[] = [
 	{
 		name: "v_rep_max_pr",
 		kind: "view",
-		purpose: "Heaviest weight ever lifted at each rep count, per exercise.",
+		purpose:
+			"Heaviest logged weight at each rep count, per exercise. Uses weight_kg as logged, so for bodyweight movements this is added weight only.",
 		columns: [
 			{ name: "template_id", type: "TEXT" },
 			{ name: "exercise_title", type: "TEXT" },

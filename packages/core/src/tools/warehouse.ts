@@ -4,7 +4,6 @@ import {
 	renderSchemaText,
 	runQuery,
 	QueryRejectedError,
-	type QueryFormat,
 } from "@hevy-mcp/warehouse/portable";
 import {
 	schemaDescriptionResponse,
@@ -17,8 +16,6 @@ import { describeTool } from "../utils/tool-descriptions.js";
 import type { InferToolParams } from "../utils/tool-helpers.js";
 import type { ToolDefinition } from "./define-tool.js";
 import type { ToolRuntime } from "./tool-runtime.js";
-
-const describeSchemaSchema = {} as const;
 
 const runQuerySchema = {
 	sql: z
@@ -97,7 +94,7 @@ export const warehouseToolDefinitions = [
 			importantNotes:
 				"Reading this is much cheaper than guessing at column names. It also lists the semantic decisions, which are assumptions rather than facts.",
 		}),
-		inputSchema: describeSchemaSchema,
+		inputSchema: {},
 		outputSchema: schemaDescriptionResponse.outputSchema,
 		annotations: readOnlyAnnotations("Describe Training Schema"),
 		kind: "read" as const,
@@ -130,11 +127,11 @@ export const warehouseToolDefinitions = [
 		execute: async (runtime: ToolRuntime, args: RunQueryParams) => {
 			try {
 				const result = runQuery(runtime.getWarehouse().read, args.sql, {
-					format: args.format as QueryFormat,
+					format: args.format,
 					maxRows: args.maxRows,
 				});
 				return {
-					rows: result.rows as Record<string, unknown>[],
+					rows: result.rows,
 					rowCount: result.rowCount,
 					columns: result.columns,
 					truncated: result.truncated,
@@ -184,8 +181,7 @@ export const warehouseToolDefinitions = [
 		kind: "read" as const,
 		responseContract: warehouseStatusResponse,
 		execute: async (runtime: ToolRuntime) => {
-			if (!runtime.warehouse) return { configured: false };
-			const db = runtime.warehouse.read;
+			const db = runtime.getWarehouse().read;
 			const [stats] = db.all<{
 				workouts: number;
 				sets: number;

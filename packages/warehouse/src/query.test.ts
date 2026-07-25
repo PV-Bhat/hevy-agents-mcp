@@ -434,3 +434,77 @@ describe("ISO week bucketing", () => {
 		expect(row.a).toBe(row.b);
 	});
 });
+
+describe("v_session working set count", () => {
+	// COUNT(*) over the LEFT JOIN counted the null placeholder row, so a
+	// session containing nothing but warmups reported one working set.
+	it("reports zero working sets for an all-warmup session", () => {
+		const db = createNodeDriver(":memory:");
+		initSchema(db, "UTC");
+		db.run(
+			`INSERT INTO exercise_template
+				(id, title, exercise_type, equipment_category, primary_muscle_group, is_custom, raw_json)
+			 VALUES ('T','Bench','weight_reps','barbell','chest',0,'{}')`,
+		);
+		upsertWorkout(
+			db,
+			{
+				id: "warmup-only",
+				start_time: "2026-04-01T10:00:00Z",
+				end_time: "2026-04-01T10:30:00Z",
+				exercises: [
+					{
+						index: 0,
+						exercise_template_id: "T",
+						title: "Bench",
+						sets: [
+							{ index: 0, type: "warmup", weight_kg: 40, reps: 10 },
+							{ index: 1, type: "warmup", weight_kg: 50, reps: 8 },
+						],
+					},
+				],
+			},
+			"UTC",
+		);
+		const [row] = db.all<{ working_set_count: number; volume_kg: number | null }>(
+			"SELECT working_set_count, volume_kg FROM v_session WHERE workout_id = 'warmup-only'",
+		);
+		expect(row.working_set_count).toBe(0);
+		expect(row.volume_kg).toBeNull();
+	});
+
+	it("still counts real working sets", () => {
+		const db = createNodeDriver(":memory:");
+		initSchema(db, "UTC");
+		db.run(
+			`INSERT INTO exercise_template
+				(id, title, exercise_type, equipment_category, primary_muscle_group, is_custom, raw_json)
+			 VALUES ('T','Bench','weight_reps','barbell','chest',0,'{}')`,
+		);
+		upsertWorkout(
+			db,
+			{
+				id: "mixed",
+				start_time: "2026-04-02T10:00:00Z",
+				end_time: "2026-04-02T11:00:00Z",
+				exercises: [
+					{
+						index: 0,
+						exercise_template_id: "T",
+						title: "Bench",
+						sets: [
+							{ index: 0, type: "warmup", weight_kg: 40, reps: 10 },
+							{ index: 1, type: "normal", weight_kg: 100, reps: 5 },
+							{ index: 2, type: "normal", weight_kg: 100, reps: 5 },
+						],
+					},
+				],
+			},
+			"UTC",
+		);
+		const [row] = db.all<{ working_set_count: number }>(
+			"SELECT working_set_count FROM v_session WHERE workout_id = 'mixed'",
+		);
+		expect(row.working_set_count).toBe(2);
+	});
+});

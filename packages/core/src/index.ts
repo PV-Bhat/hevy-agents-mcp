@@ -16,7 +16,10 @@ export {
 export {
 	WAREHOUSE_NOT_CONFIGURED_ERROR,
 	type WarehouseAccess,
+	type ToolRuntime,
 } from "./tools/tool-runtime.js";
+export { warehouseToolDefinitions } from "./tools/warehouse.js";
+export { trainingQueryResponse } from "./utils/response-formatter.js";
 export { createSafeErrorDiagnostic } from "./utils/safe-error-diagnostic.js";
 export { ErrorType } from "./utils/error-policy.js";
 export {

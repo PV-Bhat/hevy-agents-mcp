@@ -3,7 +3,7 @@
  * Warehouse sync CLI.
  *
  *   node --env-file=.env packages/warehouse/src/cli.ts probe
- *   node --env-file=.env packages/warehouse/src/cli.ts sync [--db path] [--tz zone]
+ *   node --env-file=.env packages/warehouse/src/cli.ts sync [--db path] [--tz zone] [--full]
  *   node packages/warehouse/src/cli.ts fractions
  *   node packages/warehouse/src/cli.ts set-fraction "Push Up" 0.7
  *   node packages/warehouse/src/cli.ts group "Bench" "Bench Press (Barbell)"
@@ -15,12 +15,7 @@
 import { createNodeDriver } from "./node-driver.js";
 import { createReadOnlyHttp } from "./read-only-http.js";
 import { initSchema } from "./schema.js";
-import {
-	backfill,
-	incremental,
-	syncBodyMeasurements,
-	syncTemplates,
-} from "./sync.js";
+import { runSync } from "./sync.js";
 
 function requireApiKey(): string {
 	const key = process.env.HEVY_API_KEY?.trim();
@@ -88,56 +83,46 @@ async function sync(): Promise<void> {
 	const apiKey = requireApiKey();
 	const dbPath = argValue("--db", "hevy-warehouse.db");
 	const timezone = argValue("--tz", systemTimezone());
+	const mode = process.argv.includes("--full") ? "full" : "auto";
 	const http = createReadOnlyHttp({ apiKey });
 	const db = createNodeDriver(dbPath);
 
 	try {
-		initSchema(db);
+		initSchema(db, timezone);
 		console.log(`database: ${dbPath}`);
 		console.log(`timezone: ${timezone}`);
+		console.log(`page size: ${await detectPageSize(http)}`);
 
-		const pageSize = await detectPageSize(http);
-		console.log(`page size: ${pageSize}`);
+		// Shared with the MCP server so the two cannot drift apart.
+		const result = await runSync(db, http, {
+			timezone,
+			mode,
+			pageSize: await detectPageSize(http),
+			onProgress: (done, total) => {
+				process.stdout.write(`  ${done}${total ? `/${total}` : ""} workouts`);
+			},
+			onStep: (message) => console.log(`
+${message}...`),
+		});
 
-		process.stdout.write("exercise templates... ");
-		const templates = await syncTemplates(db, http);
-		console.log(`${templates}`);
-
-		const [state] = db.all<{ backfill_complete: number }>(
-			"SELECT backfill_complete FROM sync_state WHERE id = 1",
-		);
-
-		if (state?.backfill_complete) {
-			console.log("backfill already complete; applying changes since last sync");
-			const result = await incremental(db, http, { timezone, pageSize });
+		if (result.backfill) {
 			console.log(
-				`  updated ${result.updated}, deleted ${result.deleted}`,
+				`  imported ${result.backfill.workouts} workouts` +
+					(result.backfill.removed
+						? `, removed ${result.backfill.removed} no longer in Hevy`
+						: ""),
 			);
-		} else {
-			console.log("backfilling full history...");
-			const result = await backfill(db, http, {
-				timezone,
-				pageSize,
-				onProgress: (done, total) => {
-					process.stdout.write(
-						`\r  ${done}${total ? `/${total}` : ""} workouts`,
-					);
-				},
-			});
-			console.log(`\n  imported ${result.workouts} workouts`);
 		}
-
-		process.stdout.write("body measurements... ");
-		const measurements = await syncBodyMeasurements(db, http);
-		console.log(`${measurements}`);
-
-		const [summary] = db.all<{ workouts: number; sets: number }>(
-			`SELECT
-				(SELECT COUNT(*) FROM workout) AS workouts,
-				(SELECT COUNT(*) FROM workout_set) AS sets`,
-		);
+		if (result.incremental) {
+			console.log(
+				`  updated ${result.incremental.updated}, deleted ${result.incremental.deleted}`,
+			);
+		}
+		console.log(`  exercise templates: ${result.templates}`);
+		console.log(`  body measurements: ${result.bodyMeasurements}`);
 		console.log(
-			`\ndone: ${summary.workouts} workouts, ${summary.sets} sets stored`,
+			`
+done: ${result.totals.workouts} workouts, ${result.totals.sets} sets stored`,
 		);
 	} finally {
 		db.close();
