@@ -11,6 +11,8 @@
  *  - Semantic decisions (warmup handling, muscle attribution weights,
  *    e1RM formula) live in SQL views, not in tool code, so agents and
  *    humans can read exactly what the numbers mean.
+ *  - exercise_type values follow the LIVE Hevy API, which differs from its
+ *    published OpenAPI spec. See the note in views.ts.
  */
 
 export const SCHEMA_VERSION = 1;
@@ -32,7 +34,7 @@ CREATE TABLE IF NOT EXISTS sync_state (
 CREATE TABLE IF NOT EXISTS exercise_template (
 	id TEXT PRIMARY KEY,
 	title TEXT NOT NULL,
-	exercise_type TEXT,             -- weight_reps | bodyweight_reps | duration | ...
+	exercise_type TEXT,             -- live API values: weight_reps | bodyweight_weighted | reps_only | ...
 	equipment_category TEXT,
 	primary_muscle_group TEXT,
 	is_custom INTEGER NOT NULL DEFAULT 0,

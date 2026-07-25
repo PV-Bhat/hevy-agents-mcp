@@ -4,6 +4,9 @@
  *
  *   node --env-file=.env packages/warehouse/src/cli.ts probe
  *   node --env-file=.env packages/warehouse/src/cli.ts sync [--db path] [--tz zone]
+ *   node packages/warehouse/src/cli.ts fractions
+ *   node packages/warehouse/src/cli.ts set-fraction "Push Up" 0.7
+ *   node packages/warehouse/src/cli.ts group "Bench" "Bench Press (Barbell)"
  *
  * `probe` makes a handful of read-only requests to confirm the key works,
  * report account size, and detect the real server-side page-size cap.
@@ -210,18 +213,87 @@ async function setFraction(): Promise<void> {
 	}
 }
 
+/**
+ * Group equivalent exercises so progression survives equipment changes.
+ * Lives on the CLI rather than the MCP surface because the query tools are
+ * deliberately read-only.
+ */
+async function group(): Promise<void> {
+	const [, , , name, ...titles] = process.argv;
+	const patterns = titles.filter((value) => !value.startsWith("--"));
+	const db = createNodeDriver(argValue("--db", "hevy-warehouse.db"));
+	try {
+		if (!name) {
+			const rows = db.all<{ name: string; titles: string }>(
+				`SELECT g.name, GROUP_CONCAT(t.title, ' | ') AS titles
+				 FROM exercise_group g
+				 LEFT JOIN exercise_group_member m ON m.group_id = g.id
+				 LEFT JOIN exercise_template t ON t.id = m.template_id
+				 GROUP BY g.id ORDER BY g.name`,
+			);
+			if (rows.length === 0) {
+				console.log(
+					'No exercise groups defined. Create one with:\n  cli.ts group "Bench" "Bench Press (Barbell)" "Bench Press (Dumbbell)"',
+				);
+				return;
+			}
+			for (const row of rows) {
+				console.log(`${row.name}: ${row.titles ?? "(empty)"}`);
+			}
+			return;
+		}
+		if (patterns.length === 0) {
+			console.error(
+				'usage: cli.ts group "<group name>" "<exercise title>" ["<exercise title>" ...]',
+			);
+			process.exit(1);
+		}
+		db.run("INSERT OR IGNORE INTO exercise_group(name) VALUES (?)", [name]);
+		const [{ id }] = db.all<{ id: number }>(
+			"SELECT id FROM exercise_group WHERE name = ?",
+			[name],
+		);
+		let added = 0;
+		for (const title of patterns) {
+			const matches = db.all<{ id: string; title: string }>(
+				"SELECT id, title FROM exercise_template WHERE title = ?",
+				[title],
+			);
+			if (matches.length === 0) {
+				console.error(`  no exercise template titled "${title}" — skipped`);
+				continue;
+			}
+			for (const match of matches) {
+				db.run(
+					"INSERT OR IGNORE INTO exercise_group_member(group_id, template_id) VALUES (?,?)",
+					[id, match.id],
+				);
+				console.log(`  + ${match.title}`);
+				added++;
+			}
+		}
+		console.log(
+			`group "${name}": ${added} member(s). Query it by joining ` +
+				"exercise_group_member on v_set.template_id.",
+		);
+	} finally {
+		db.close();
+	}
+}
+
 const command = process.argv[2];
 const commands: Record<string, () => Promise<void>> = {
 	probe,
 	sync,
 	fractions,
 	"set-fraction": setFraction,
+	group,
 };
 const run = commands[command ?? ""];
 
 if (!run) {
 	console.error(
-		"usage: cli.ts <probe|sync|fractions|set-fraction> [--db path] [--tz zone]",
+		"usage: cli.ts <probe|sync|fractions|set-fraction|group> [--db path] [--tz zone]",
 	);
 	process.exit(1);
 }

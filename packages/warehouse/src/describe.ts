@@ -53,8 +53,9 @@ const CONVENTIONS = [
 	"Use local_date (YYYY-MM-DD, user's timezone) for any day/week/month grouping. start_time is a UTC instant and will misassign late-evening sessions.",
 	"Warmup sets are already excluded from every view whose name starts with v_. Query workout_set directly if you specifically need them.",
 	"volume_kg is NULL, not 0, where weight x reps is meaningless (cardio, duration and reps-only movements). Filter with WHERE volume_kg IS NOT NULL.",
-	"e1rm_kg uses the Epley formula and is only populated for sets of 1-12 reps with a load above zero.",
+	"e1rm_kg uses the Epley formula over effective_load_kg, not the logged weight, so a weighted pull-up is not estimated from its belt plate alone. Only populated for 1-12 rep sets. e1rm_basis says whether the load was measured or modelled from bodyweight.",
 	"Always read volume_basis alongside volume_kg. 'weight_x_reps' is measured; 'bodyweight_fraction' and 'bodyweight_fraction_plus_added' are modelled from the user's bodyweight and an editable per-exercise fraction (see the bodyweight_fraction table); 'unknown_load' and 'not_applicable' mean volume_kg is NULL. Do not compare modelled and measured volume without saying so.",
+	"iso_week in v_weekly_muscle_volume is a true ISO week-year label (%G-W%V), so the week spanning new year stays in one bucket.",
 	"In v_set_muscle each set appears once per muscle involved. Primary muscle gets credit 1.0, secondary muscles 0.5. Summing volume_kg there double counts; sum credited_volume_kg instead, or filter on is_primary = 1.",
 ];
 
@@ -87,7 +88,8 @@ const RELATIONS: RelationDoc[] = [
 			{ name: "effective_load_kg", type: "REAL", note: "what the body moved, incl. bodyweight" },
 			{ name: "volume_kg", type: "REAL", note: "NULL where meaningless" },
 			{ name: "volume_basis", type: "TEXT", note: "how volume_kg was derived; read this" },
-			{ name: "e1rm_kg", type: "REAL", note: "Epley, 1-12 reps only" },
+			{ name: "e1rm_kg", type: "REAL", note: "Epley over effective load, 1-12 reps only" },
+			{ name: "e1rm_basis", type: "TEXT", note: "measured | modelled_bodyweight" },
 			{ name: "rpe", type: "REAL" },
 			{ name: "bodyweight_kg", type: "REAL", note: "carried at time of session" },
 			{ name: "bodyweight_fraction", type: "REAL", note: "share of bodyweight the movement loads" },
@@ -339,7 +341,7 @@ export function describeSchema(db: SqlDriver): SchemaDescription {
 			e1rmValidRepRange: "1-12 reps, load above zero",
 			bodyweightFractions,
 			howToChange: [
-				"Bodyweight fractions live in the bodyweight_fraction table and are matched against the longest exercise-title prefix.",
+				"Bodyweight fractions live in the bodyweight_fraction table and are matched against the longest exercise-title prefix. They affect volume_kg, effective_load_kg and e1rm_kg for bodyweight movements.",
 				"Change one with the sync CLI: `hevy-warehouse set-fraction \"Push Up\" 0.7`, or list them with `hevy-warehouse fractions`.",
 				"Views recompute on the next server start, so no re-sync from Hevy is needed after a change.",
 				"The secondary-muscle credit of 0.5 is fixed in the v_set_muscle view. To use a different weighting in one query, read is_primary and apply your own factor rather than credited_volume_kg.",

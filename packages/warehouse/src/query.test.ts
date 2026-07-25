@@ -270,3 +270,167 @@ describe("read-only driver", () => {
 		).toThrow();
 	});
 });
+
+describe("truncation reporting", () => {
+	function wideDb() {
+		const db = createNodeDriver(":memory:");
+		initSchema(db, "UTC");
+		db.run(
+			`INSERT INTO exercise_template
+				(id, title, exercise_type, equipment_category, primary_muscle_group, is_custom, raw_json)
+			 VALUES ('T','Row','weight_reps','barbell','lats',0,'{}')`,
+		);
+		for (let i = 0; i < 30; i++) {
+			upsertWorkout(
+				db,
+				{
+					id: `w${i}`,
+					title: `Session ${i} ${"padding".repeat(20)}`,
+					start_time: `2026-01-${String((i % 28) + 1).padStart(2, "0")}T10:00:00Z`,
+					end_time: `2026-01-${String((i % 28) + 1).padStart(2, "0")}T11:00:00Z`,
+					exercises: [
+						{
+							index: 0,
+							exercise_template_id: "T",
+							title: "Row",
+							sets: [{ index: 0, type: "normal", weight_kg: 60, reps: 10 }],
+						},
+					],
+				},
+				"UTC",
+			);
+		}
+		return db;
+	}
+
+	// Reporting truncated:false after shedding rows lets an agent present a
+	// partial answer as complete. Both caps must set the flag.
+	it("flags truncation when only the byte cap fires", () => {
+		const db = wideDb();
+		const result = runQuery(db, "SELECT * FROM v_set", {
+			maxRows: 500,
+			maxBytes: 200,
+		});
+		expect(result.rowCount).toBeLessThan(30);
+		expect(result.truncated).toBe(true);
+		expect(result.notes?.some((n) => n.includes("bytes"))).toBe(true);
+	});
+
+	it("flags truncation when the row cap fires", () => {
+		const db = wideDb();
+		const result = runQuery(db, "SELECT * FROM v_set", { maxRows: 5 });
+		expect(result.rowCount).toBe(5);
+		expect(result.truncated).toBe(true);
+	});
+
+	it("does not flag truncation when everything fits", () => {
+		const db = wideDb();
+		const result = runQuery(db, "SELECT workout_id FROM v_set LIMIT 3");
+		expect(result.truncated).toBe(false);
+		expect(result.notes).toBeUndefined();
+	});
+
+	it("caps rows in SQL rather than after materializing", () => {
+		const db = wideDb();
+		// A user LIMIT larger than maxRows must still be capped.
+		const result = runQuery(db, "SELECT workout_id FROM v_set LIMIT 100", {
+			maxRows: 4,
+		});
+		expect(result.rowCount).toBe(4);
+		expect(result.truncated).toBe(true);
+	});
+
+	it("wraps a query that ends in a semicolon", () => {
+		const db = wideDb();
+		expect(() => runQuery(db, "SELECT workout_id FROM v_set;")).not.toThrow();
+	});
+});
+
+describe("estimated 1RM basis", () => {
+	function bwDb() {
+		const db = createNodeDriver(":memory:");
+		initSchema(db, "UTC");
+		db.run(
+			`INSERT INTO exercise_template
+				(id, title, exercise_type, equipment_category, primary_muscle_group, is_custom, raw_json)
+			 VALUES ('P','Pull Up (Weighted)','bodyweight_weighted','none','lats',0,'{}')`,
+		);
+		db.run(
+			"INSERT INTO body_measurement(date, weight_kg, raw_json) VALUES ('2026-01-01', 80, '{}')",
+		);
+		upsertWorkout(
+			db,
+			{
+				id: "w1",
+				start_time: "2026-02-01T10:00:00Z",
+				end_time: "2026-02-01T11:00:00Z",
+				exercises: [
+					{
+						index: 0,
+						exercise_template_id: "P",
+						title: "Pull Up (Weighted)",
+						sets: [{ index: 0, type: "normal", weight_kg: 10, reps: 5 }],
+					},
+				],
+			},
+			"UTC",
+		);
+		return db;
+	}
+
+	// Estimating from the 10 kg belt plate alone would report a ~12 kg 1RM
+	// for someone doing weighted pull-ups at 90 kg of total load.
+	it("uses effective load, not the added plate, for bodyweight movements", () => {
+		const db = bwDb();
+		const [row] = db.all<{ e1rm_kg: number; e1rm_basis: string }>(
+			"SELECT e1rm_kg, e1rm_basis FROM v_set",
+		);
+		// (80 * 1.0 + 10) * (1 + 5/30) = 105
+		expect(row.e1rm_kg).toBeCloseTo(105, 5);
+		expect(row.e1rm_basis).toBe("modelled_bodyweight");
+	});
+
+	it("labels barbell work as measured", () => {
+		const db = createNodeDriver(":memory:");
+		initSchema(db, "UTC");
+		db.run(
+			`INSERT INTO exercise_template
+				(id, title, exercise_type, equipment_category, primary_muscle_group, is_custom, raw_json)
+			 VALUES ('B','Bench','weight_reps','barbell','chest',0,'{}')`,
+		);
+		upsertWorkout(
+			db,
+			{
+				id: "w1",
+				start_time: "2026-02-01T10:00:00Z",
+				end_time: "2026-02-01T11:00:00Z",
+				exercises: [
+					{
+						index: 0,
+						exercise_template_id: "B",
+						title: "Bench",
+						sets: [{ index: 0, type: "normal", weight_kg: 100, reps: 5 }],
+					},
+				],
+			},
+			"UTC",
+		);
+		const [row] = db.all<{ e1rm_kg: number; e1rm_basis: string }>(
+			"SELECT e1rm_kg, e1rm_basis FROM v_set",
+		);
+		expect(row.e1rm_kg).toBeCloseTo(116.667, 2);
+		expect(row.e1rm_basis).toBe("measured");
+	});
+});
+
+describe("ISO week bucketing", () => {
+	// %Y-%W labels 2026-01-01 as week "00" and splits the turn-of-year week.
+	it("keeps a week spanning new year in one ISO bucket", () => {
+		const db = createNodeDriver(":memory:");
+		initSchema(db, "UTC");
+		const [row] = db.all<{ a: string; b: string }>(
+			"SELECT strftime('%G-W%V','2025-12-31') AS a, strftime('%G-W%V','2026-01-01') AS b",
+		);
+		expect(row.a).toBe(row.b);
+	});
+});

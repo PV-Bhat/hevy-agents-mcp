@@ -16,8 +16,5 @@
 	"scripts": {
 		"build": "tsc --noEmit -p tsconfig.json",
 		"check:types": "tsc --noEmit -p tsconfig.json"
-	},
-	"dependencies": {
-		"@hevy-mcp/hevy-client": "*"
 	}
 }

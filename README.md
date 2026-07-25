@@ -344,11 +344,34 @@ exposing it as SQL:
 Hevy API  →  read-only sync  →  local SQLite  →  run-training-query  →  your agent
 ```
 
-Enable it by pointing the server at a database file:
+### Setup
+
+Requires **Node >= 22.5** for the built-in `node:sqlite` module. Pass-through
+mode (no warehouse) still runs on Node 20.
+
+| Variable | Required | Meaning |
+| --- | --- | --- |
+| `HEVY_WAREHOUSE_DB` | yes, to enable | Path to the SQLite file. Created if absent. |
+| `HEVY_WAREHOUSE_TZ` | no | IANA zone for day/week bucketing. Defaults to the system zone. Changing it recomputes stored dates on next start. |
+
+First-time import, roughly one request per ten workouts:
+
+```bash
+node --env-file=.env packages/warehouse/src/cli.ts probe
+```
+
+```bash
+node --env-file=.env packages/warehouse/src/cli.ts sync
+```
+
+Then point the server at the same file:
 
 ```bash
 HEVY_WAREHOUSE_DB=./hevy-warehouse.db
 ```
+
+Afterwards the server keeps itself current through `sync-training-history`,
+which applies only what changed.
 
 Four extra tools appear when it is configured, and none when it is not:
 
@@ -387,9 +410,34 @@ Inspect and change the fractions — no re-sync needed, views recompute on the
 next server start:
 
 ```bash
-npx tsx packages/warehouse/src/cli.ts fractions
-npx tsx packages/warehouse/src/cli.ts set-fraction "Push Up" 0.7
+node packages/warehouse/src/cli.ts fractions
 ```
+
+```bash
+node packages/warehouse/src/cli.ts set-fraction "Push Up" 0.7
+```
+
+### Exercise substitutions
+
+Equivalent movements are separate templates in Hevy, so a gym change breaks a
+progression curve. Group them so they aggregate:
+
+```bash
+node packages/warehouse/src/cli.ts group "Bench" "Bench Press (Barbell)" "Bench Press (Dumbbell)"
+```
+
+Join `exercise_group_member` on `v_set.template_id` to query by group. Grouping
+lives on the CLI rather than an MCP tool because the query surface is
+deliberately read-only.
+
+### Sync modes
+
+`sync-training-history` takes `mode=auto` (default) or `mode=full`.
+
+- **auto** applies the Hevy events feed since the last sync, including deletions.
+- **full** re-reads everything and is authoritative: local workouts Hevy no
+  longer has are removed. Use it after a long gap, where events may have aged
+  out, or whenever you suspect drift.
 
 > Note: the live Hevy API returns `exercise_type` values that differ from its
 > published OpenAPI spec (`bodyweight_weighted` and `bodyweight_assisted` rather

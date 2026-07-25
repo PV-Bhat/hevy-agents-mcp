@@ -6,6 +6,7 @@ import {
 	deleteWorkout,
 	incremental,
 	localDateOf,
+	recomputeLocalDates,
 	upsertWorkout,
 } from "./sync.js";
 import type { ReadOnlyHttp } from "./read-only-http.js";
@@ -221,5 +222,159 @@ describe("incremental", () => {
 			"SELECT last_event_sync_at FROM sync_state",
 		);
 		expect(state.last_event_sync_at).toBeTruthy();
+	});
+});
+
+describe("full-sync delete reconciliation", () => {
+	function workout(id: string, date: string) {
+		return {
+			id,
+			title: `Session ${id}`,
+			start_time: `${date}T10:00:00Z`,
+			end_time: `${date}T11:00:00Z`,
+			exercises: [
+				{
+					index: 0,
+					exercise_template_id: "T",
+					title: "Row",
+					sets: [{ index: 0, type: "normal", weight_kg: 60, reps: 10 }],
+				},
+			],
+		};
+	}
+
+	function stubHttp(workouts: ReturnType<typeof workout>[]) {
+		return {
+			get: async (path: string, query: Record<string, string | number> = {}) => {
+				if (path === "/v1/workouts/count")
+					return { workout_count: workouts.length };
+				if (path === "/v1/workouts") {
+					const pageSize = Number(query.pageSize ?? 10);
+					const page = Number(query.page ?? 1);
+					const slice = workouts.slice((page - 1) * pageSize, page * pageSize);
+					return {
+						workouts: slice,
+						page_count: Math.max(1, Math.ceil(workouts.length / pageSize)),
+					};
+				}
+				return {};
+			},
+		};
+	}
+
+	async function seededDb() {
+		const db = createNodeDriver(":memory:");
+		initSchema(db, "UTC");
+		await backfill(
+			db,
+			stubHttp([
+				workout("a", "2026-01-01"),
+				workout("b", "2026-01-02"),
+				workout("c", "2026-01-03"),
+			]),
+			{ timezone: "UTC" },
+		);
+		return db;
+	}
+
+	it("imports the initial history", async () => {
+		const db = await seededDb();
+		expect(db.all<{ n: number }>("SELECT COUNT(*) n FROM workout")[0].n).toBe(3);
+	});
+
+	// Deletions otherwise arrive only via the events feed. A rebuild after a
+	// missed-events window would leave ghost workouts and permanently inflate
+	// every lifetime total.
+	it("removes workouts Hevy no longer has when reconciling", async () => {
+		const db = await seededDb();
+		db.run(
+			"UPDATE sync_state SET backfill_complete = 0, last_backfill_page = NULL WHERE id = 1",
+		);
+		const result = await backfill(
+			db,
+			stubHttp([workout("a", "2026-01-01"), workout("c", "2026-01-03")]),
+			{ timezone: "UTC", reconcileDeletes: true },
+		);
+		expect(result.removed).toBe(1);
+		const ids = db
+			.all<{ id: string }>("SELECT id FROM workout ORDER BY id")
+			.map((r) => r.id);
+		expect(ids).toEqual(["a", "c"]);
+	});
+
+	it("cascades child rows when reconciling removes a workout", async () => {
+		const db = await seededDb();
+		db.run(
+			"UPDATE sync_state SET backfill_complete = 0, last_backfill_page = NULL WHERE id = 1",
+		);
+		await backfill(db, stubHttp([workout("a", "2026-01-01")]), {
+			timezone: "UTC",
+			reconcileDeletes: true,
+		});
+		expect(
+			db.all<{ n: number }>("SELECT COUNT(*) n FROM workout_set")[0].n,
+		).toBe(1);
+		expect(
+			db.all<{ n: number }>(
+				"SELECT COUNT(*) n FROM workout_exercise WHERE workout_id <> 'a'",
+			)[0].n,
+		).toBe(0);
+	});
+
+	it("leaves local data alone when not reconciling", async () => {
+		const db = await seededDb();
+		db.run(
+			"UPDATE sync_state SET backfill_complete = 0, last_backfill_page = NULL WHERE id = 1",
+		);
+		const result = await backfill(db, stubHttp([workout("a", "2026-01-01")]), {
+			timezone: "UTC",
+		});
+		expect(result.removed).toBe(0);
+		expect(db.all<{ n: number }>("SELECT COUNT(*) n FROM workout")[0].n).toBe(3);
+	});
+
+	it("drops its staging table afterwards", async () => {
+		const db = await seededDb();
+		db.run(
+			"UPDATE sync_state SET backfill_complete = 0, last_backfill_page = NULL WHERE id = 1",
+		);
+		await backfill(db, stubHttp([workout("a", "2026-01-01")]), {
+			timezone: "UTC",
+			reconcileDeletes: true,
+		});
+		const tables = db.all<{ name: string }>(
+			"SELECT name FROM sqlite_master WHERE type='table' AND name='sync_seen'",
+		);
+		expect(tables).toEqual([]);
+	});
+});
+
+describe("recomputeLocalDates", () => {
+	// A changed timezone must not leave historical rows on their old day, or
+	// daily and weekly grouping silently mixes two conventions.
+	it("moves a late-evening session to the correct local day", () => {
+		const db = createNodeDriver(":memory:");
+		initSchema(db, "UTC");
+		upsertWorkout(
+			db,
+			{
+				id: "late",
+				start_time: "2026-03-01T23:30:00Z",
+				end_time: "2026-03-02T00:30:00Z",
+				exercises: [],
+			},
+			"UTC",
+		);
+		expect(
+			db.all<{ local_date: string }>("SELECT local_date FROM workout")[0]
+				.local_date,
+		).toBe("2026-03-01");
+
+		const updated = recomputeLocalDates(db, "Asia/Tokyo");
+		expect(updated).toBe(1);
+		expect(
+			db.all<{ local_date: string }>("SELECT local_date FROM workout")[0]
+				.local_date,
+		).toBe("2026-03-02");
 	});
 });

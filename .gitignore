@@ -147,3 +147,6 @@ dist
 *.db
 *.db-wal
 *.db-shm
+
+# Local MCP client config: machine-specific paths and key location
+.mcp.json

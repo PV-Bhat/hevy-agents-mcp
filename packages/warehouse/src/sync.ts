@@ -145,6 +145,32 @@ export function upsertWorkout(
 	});
 }
 
+/**
+ * Recompute local_date for every stored workout under a new timezone.
+ *
+ * Without this, changing the timezone updates the recorded setting but
+ * leaves every historical local_date on its old day, so weekly and daily
+ * grouping silently mixes two conventions. Runs off the stored UTC instant,
+ * so no re-download is needed.
+ */
+export function recomputeLocalDates(db: SqlDriver, timezone: string): number {
+	const rows = db.all<{ id: string; start_time: string | null }>(
+		"SELECT id, start_time FROM workout",
+	);
+	let updated = 0;
+	db.transaction(() => {
+		for (const row of rows) {
+			const localDate = localDateOf(row.start_time ?? undefined, timezone);
+			db.run("UPDATE workout SET local_date = ? WHERE id = ?", [
+				localDate,
+				row.id,
+			]);
+			updated++;
+		}
+	});
+	return updated;
+}
+
 export function deleteWorkout(db: SqlDriver, workoutId: string): void {
 	db.transaction(() => {
 		db.run("DELETE FROM workout_exercise WHERE workout_id = ?", [workoutId]);
@@ -152,12 +178,23 @@ export function deleteWorkout(db: SqlDriver, workoutId: string): void {
 	});
 }
 
+export interface BackfillOptions extends SyncOptions {
+	/**
+	 * Treat the download as authoritative: any local workout not seen during
+	 * this pass is deleted. Required for a full re-sync, because deletions
+	 * otherwise only arrive through the events feed — so a rebuild after a
+	 * missed-events window would leave ghost workouts and permanently
+	 * inflated lifetime totals.
+	 */
+	reconcileDeletes?: boolean;
+}
+
 /** Full one-time download. Resumable: restarts from last completed page. */
 export async function backfill(
 	db: SqlDriver,
 	http: ReadOnlyHttp,
-	options: SyncOptions,
-): Promise<{ workouts: number; pages: number }> {
+	options: BackfillOptions,
+): Promise<{ workouts: number; pages: number; removed: number }> {
 	const pageSize = options.pageSize ?? 10;
 	// Anchor the incremental feed BEFORE downloading, so edits made during
 	// a long backfill are picked up by the first incremental pass.
@@ -174,6 +211,15 @@ export async function backfill(
 	let page = (resume?.last_backfill_page ?? 0) + 1;
 	let imported = 0;
 
+	if (options.reconcileDeletes) {
+		// Staging table rather than an in-memory id list: a reconcile pass is
+		// resumable across interrupted runs and does not grow the heap with
+		// the account size.
+		db.exec(
+			"CREATE TABLE IF NOT EXISTS sync_seen (id TEXT PRIMARY KEY); DELETE FROM sync_seen;",
+		);
+	}
+
 	while (true) {
 		const data = (await http.get("/v1/workouts", { page, pageSize })) as {
 			workouts?: WorkoutJson[];
@@ -183,6 +229,9 @@ export async function backfill(
 		if (workouts.length === 0) break;
 		for (const workout of workouts) {
 			upsertWorkout(db, workout, options.timezone);
+			if (options.reconcileDeletes && workout.id) {
+				db.run("INSERT OR IGNORE INTO sync_seen(id) VALUES (?)", [workout.id]);
+			}
 			imported++;
 		}
 		db.run("UPDATE sync_state SET last_backfill_page = ? WHERE id = 1", [
@@ -194,12 +243,24 @@ export async function backfill(
 		page++;
 	}
 
+	let removed = 0;
+	if (options.reconcileDeletes) {
+		const stale = db.all<{ id: string }>(
+			"SELECT id FROM workout WHERE id NOT IN (SELECT id FROM sync_seen)",
+		);
+		for (const row of stale) {
+			deleteWorkout(db, row.id);
+			removed++;
+		}
+		db.exec("DROP TABLE IF EXISTS sync_seen");
+	}
+
 	db.run(
 		`UPDATE sync_state SET backfill_complete = 1,
 			last_event_sync_at = ?, workout_count_at_backfill = ? WHERE id = 1`,
 		[syncAnchor, total ?? imported],
 	);
-	return { workouts: imported, pages: page };
+	return { workouts: imported, pages: page, removed };
 }
 
 /** Apply the event feed since the last sync. */

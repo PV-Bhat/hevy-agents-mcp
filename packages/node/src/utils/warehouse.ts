@@ -61,7 +61,18 @@ export function openWarehouse(
 	// The writable handle owns schema creation; views are refreshed on every
 	// open so a definition change ships without a migration step.
 	const write: SqlDriver = createNodeDriver(options.path);
+	const [previousTz] = write.all<{ value: string }>(
+		"SELECT value FROM meta WHERE key = 'timezone'",
+	);
 	initSchema(write, timezone);
+	// A changed timezone would otherwise leave every historical local_date on
+	// its old day, silently mixing two conventions in the same table.
+	if (previousTz?.value && previousTz.value !== timezone) {
+		const updated = recomputeLocalDates(write, timezone);
+		console.error(
+			`Warehouse timezone changed ${previousTz.value} -> ${timezone}; recomputed ${updated} workout dates.`,
+		);
+	}
 
 	const read: SqlDriver = createNodeDriver(options.path, { readOnly: true });
 
@@ -87,7 +98,13 @@ export function openWarehouse(
 			}
 
 			if (needsBackfill) {
-				const result = await backfill(write, http, { timezone });
+				const result = await backfill(write, http, {
+					timezone,
+					// A full pass is authoritative and must remove local workouts
+					// Hevy no longer has. An initial backfill has nothing to
+					// reconcile against, so the extra bookkeeping is skipped.
+					reconcileDeletes: mode === "full",
+				});
 				details.backfill = result;
 			} else {
 				const result = await incremental(write, http, { timezone });

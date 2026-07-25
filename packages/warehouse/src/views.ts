@@ -138,12 +138,42 @@ SELECT
 			THEN bw.bodyweight_kg * bf.fraction * ws.reps
 		ELSE NULL
 	END AS volume_kg,
-	-- Epley estimated 1RM, only in the range where it is defensible.
+	-- Epley estimated 1RM over the load actually moved, so a weighted pull-up
+	-- is not estimated from its 5 kg belt plate alone. Restricted to the rep
+	-- range where the formula is defensible.
 	CASE
-		WHEN ws.reps BETWEEN 1 AND 12 AND ws.weight_kg > 0
-			THEN ws.weight_kg * (1.0 + ws.reps / 30.0)
+		WHEN ws.reps BETWEEN 1 AND 12
+			AND CASE t.exercise_type
+				WHEN 'weight_reps' THEN ws.weight_kg
+				WHEN 'short_distance_weight' THEN ws.weight_kg
+				WHEN 'bodyweight_weighted'
+					THEN bw.bodyweight_kg * COALESCE(bf.fraction, 1.0) + COALESCE(ws.weight_kg, 0)
+				WHEN 'bodyweight_assisted'
+					THEN bw.bodyweight_kg * COALESCE(bf.fraction, 1.0) - COALESCE(ws.weight_kg, 0)
+				WHEN 'reps_only' THEN bw.bodyweight_kg * bf.fraction
+				ELSE NULL
+			END > 0
+			THEN CASE t.exercise_type
+				WHEN 'weight_reps' THEN ws.weight_kg
+				WHEN 'short_distance_weight' THEN ws.weight_kg
+				WHEN 'bodyweight_weighted'
+					THEN bw.bodyweight_kg * COALESCE(bf.fraction, 1.0) + COALESCE(ws.weight_kg, 0)
+				WHEN 'bodyweight_assisted'
+					THEN bw.bodyweight_kg * COALESCE(bf.fraction, 1.0) - COALESCE(ws.weight_kg, 0)
+				WHEN 'reps_only' THEN bw.bodyweight_kg * bf.fraction
+				ELSE NULL
+			END * (1.0 + ws.reps / 30.0)
 		ELSE NULL
-	END AS e1rm_kg
+	END AS e1rm_kg,
+	-- Whether e1rm_kg came from a measured external load or a modelled one.
+	CASE
+		WHEN t.exercise_type IN ('weight_reps','short_distance_weight')
+			THEN 'measured'
+		WHEN t.exercise_type IN
+			('bodyweight_weighted','bodyweight_assisted','reps_only')
+			THEN 'modelled_bodyweight'
+		ELSE NULL
+	END AS e1rm_basis
 FROM workout_set ws
 JOIN workout_exercise we
 	ON we.workout_id = ws.workout_id AND we.exercise_index = ws.exercise_index
@@ -196,10 +226,12 @@ LEFT JOIN v_set s ON s.workout_id = w.id
 GROUP BY w.id;
 
 -- Weekly volume per muscle group, secondary muscles credited at 0.5.
+-- %G-%V is the true ISO week-year and week number. %Y-%W would put
+-- 2026-01-01 in "2026-00" and split the turn-of-year week across two labels.
 DROP VIEW IF EXISTS v_weekly_muscle_volume;
 CREATE VIEW v_weekly_muscle_volume AS
 SELECT
-	strftime('%Y-%W', local_date) AS iso_week,
+	strftime('%G-W%V', local_date) AS iso_week,
 	MIN(local_date) AS week_start,
 	muscle_group,
 	SUM(credited_volume_kg) AS volume_kg,

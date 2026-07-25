@@ -126,6 +126,11 @@ export function validateQuery(sql: string): string {
 	return trimmed;
 }
 
+/** Strip a single trailing semicolon so the statement can be wrapped. */
+export function stripTrailingSemicolon(sql: string): string {
+	return sql.trim().replace(/;\s*$/, "");
+}
+
 export type QueryFormat = "json" | "csv" | "markdown";
 
 export interface QueryOptions {
@@ -190,13 +195,17 @@ export function runQuery(
 	const format = options.format ?? "json";
 	const notes: string[] = [];
 
-	// Fetch one extra row to detect truncation without a second query.
-	const all = db.all<Record<string, SqlValue>>(validated, options.params ?? []);
-	const truncated = all.length > maxRows;
-	let rows = truncated ? all.slice(0, maxRows) : all;
-	if (truncated) {
+	// Push the cap into SQL rather than materializing every row and slicing.
+	// An unbounded `SELECT * FROM v_set` would otherwise load the entire
+	// history into memory before being discarded. One extra row is requested
+	// so truncation is detectable without a second query.
+	const limited = `SELECT * FROM (${stripTrailingSemicolon(validated)}) LIMIT ${maxRows + 1}`;
+	const all = db.all<Record<string, SqlValue>>(limited, options.params ?? []);
+	const rowLimitHit = all.length > maxRows;
+	let rows = rowLimitHit ? all.slice(0, maxRows) : all;
+	if (rowLimitHit) {
 		notes.push(
-			`Result truncated to ${maxRows} rows (query matched at least ${all.length}). ` +
+			`Result truncated to ${maxRows} rows (the query matched more). ` +
 				"Add LIMIT, aggregate, or raise maxRows.",
 		);
 	}
@@ -206,6 +215,7 @@ export function runQuery(
 
 	// Byte cap: shed rows until the payload fits, so a wide result set
 	// cannot blow the context window even under the row cap.
+	let byteLimitHit = false;
 	if (formatted.length > maxBytes && rows.length > 1) {
 		let keep = rows.length;
 		while (keep > 1 && formatted.length > maxBytes) {
@@ -213,6 +223,7 @@ export function runQuery(
 			rows = rows.slice(0, keep);
 			formatted = formatRows(rows, columns, format);
 		}
+		byteLimitHit = true;
 		notes.push(
 			`Result further reduced to ${rows.length} rows to stay under ${maxBytes} bytes.`,
 		);
@@ -221,7 +232,9 @@ export function runQuery(
 	return {
 		rows,
 		rowCount: rows.length,
-		truncated: truncated || notes.length > 1,
+		// Any reduction at all, by row cap or byte cap. Reporting false after
+		// shedding rows would let an agent present a partial answer as complete.
+		truncated: rowLimitHit || byteLimitHit,
 		columns,
 		formatted,
 		format,
