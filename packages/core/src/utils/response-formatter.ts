@@ -1149,6 +1149,15 @@ const trainingQueryOutputSchema = {
 	 */
 	rejected: z.boolean().optional(),
 	rejectionReason: z.string().optional(),
+	/**
+	 * The rendered table for csv and markdown formats.
+	 *
+	 * These formats put their payload in the text content block, but many
+	 * clients surface structuredContent in preference to text — which made
+	 * the cheaper formats return a row count and no rows at all. The data
+	 * has to be reachable from the structured output too.
+	 */
+	formatted: z.string().optional(),
 } as const;
 
 export interface TrainingQueryResultData {
@@ -1174,6 +1183,9 @@ export const trainingQueryResponse = defineStructuredResponseContract({
 			? { rejected: true, rejectionReason: data.rejectionReason }
 			: {}),
 		...(data.format === "json" && !data.rejected ? { rows: data.rows } : {}),
+		...(data.format !== "json" && !data.rejected
+			? { formatted: data.formatted }
+			: {}),
 		...(data.notes ? { notes: data.notes } : {}),
 	}),
 	legacyJson: (output) => output,

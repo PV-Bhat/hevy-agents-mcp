@@ -7,6 +7,7 @@ import {
 } from "@hevy-mcp/warehouse";
 import { warehouseToolDefinitions } from "./warehouse.js";
 import type { ToolRuntime, WarehouseAccess } from "./tool-runtime.js";
+import { trainingQueryResponse } from "../utils/response-formatter.js";
 
 function seededWarehouse(): SqlDriver {
 	const db = createNodeDriver(":memory:");
@@ -217,5 +218,38 @@ describe("modeling assumptions are disclosed", () => {
 		)) as string;
 		expect(text).toContain("0.71  Push Up");
 		expect(text).not.toContain("0.64  Push Up");
+	});
+});
+
+describe("non-JSON formats keep their payload reachable", () => {
+	// The rendered table lives in the text content block, but clients that
+	// prefer structuredContent were seeing a row count and no rows.
+	it.each(["csv", "markdown"] as const)(
+		"includes the rendered table in structured output for %s",
+		async (format) => {
+			const db = seededWarehouse();
+			const result = (await tool("run-training-query").execute(
+				runtimeWith({ read: db }),
+				{
+					sql: "SELECT exercise_title, reps FROM v_set",
+					format,
+					maxRows: 500,
+				} as never,
+			)) as { formatted: string };
+			const rendered = trainingQueryResponse.render(result as never);
+			expect(rendered.structuredContent).toMatchObject({
+				formatted: expect.stringContaining("Bench Press (Barbell)"),
+			});
+		},
+	);
+
+	it("keeps rows out of structured output for non-JSON formats", async () => {
+		const db = seededWarehouse();
+		const result = await tool("run-training-query").execute(
+			runtimeWith({ read: db }),
+			{ sql: "SELECT reps FROM v_set", format: "csv", maxRows: 500 } as never,
+		);
+		const rendered = trainingQueryResponse.render(result as never);
+		expect(rendered.structuredContent).not.toHaveProperty("rows");
 	});
 });
