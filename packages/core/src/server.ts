@@ -3,12 +3,15 @@ import type { HevyClient, HevyClientLogEvent } from "@hevy-mcp/hevy-client";
 import { registerWorkoutPrompts } from "./prompts/workouts.js";
 import { registerHevyResources } from "./resources/hevy.js";
 import {
-	SERVER_INSTRUCTIONS,
 	SERVER_NAME,
 	SERVER_VERSION,
+	serverInstructions,
 } from "./server-metadata.js";
 import { registerHevyTools } from "./tools/register.js";
-import { createToolRuntime } from "./tools/tool-runtime.js";
+import {
+	createToolRuntime,
+	type WarehouseAccess,
+} from "./tools/tool-runtime.js";
 import { createExerciseTemplateCatalog } from "./utils/exercise-template-catalog.js";
 import { createMcpClientLogger } from "./utils/mcp-client-logger.js";
 import type { ToolObserver } from "./observation.js";
@@ -22,6 +25,12 @@ export interface CreateHevyMcpServerOptions {
 	readonly observer?: ToolObserver;
 	readonly decorateServer?: (server: McpServer) => McpServer;
 	readonly onToolsRegistered?: (count: number) => void;
+	/**
+	 * Local analytical copy of the account history. When supplied, the
+	 * warehouse query tools are registered; when omitted the server behaves
+	 * exactly as a pass-through proxy.
+	 */
+	readonly warehouse?: WarehouseAccess;
 }
 
 function createCountingServer(server: McpServer) {
@@ -58,7 +67,10 @@ export function createHevyMcpServer(
 ): McpServer {
 	const baseServer = new McpServer(
 		{ name: SERVER_NAME, version: SERVER_VERSION },
-		{ capabilities: { logging: {} }, instructions: SERVER_INSTRUCTIONS },
+		{
+			capabilities: { logging: {} },
+			instructions: serverInstructions(Boolean(options.warehouse)),
+		},
 	);
 	const server = options.decorateServer?.(baseServer) ?? baseServer;
 	const mcpLogger = createMcpClientLogger(server);
@@ -68,6 +80,7 @@ export function createHevyMcpServer(
 		catalog: createExerciseTemplateCatalog(client),
 		logger: mcpLogger,
 		observer: options.observer,
+		warehouse: options.warehouse,
 	});
 	const counting = createCountingServer(server);
 	registerHevyTools(counting.server, runtime);

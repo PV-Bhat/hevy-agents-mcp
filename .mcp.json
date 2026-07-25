@@ -1,0 +1,15 @@
+{
+	"mcpServers": {
+		"hevy-warehouse": {
+			"command": "node",
+			"args": [
+				"--env-file=C:\Users\astro\OneDrive\Desktop\hevy-mcp\.env",
+				"C:\Users\astro\OneDrive\Desktop\hevy-mcp\node_modules\tsx\dist\cli.mjs",
+				"C:\Users\astro\OneDrive\Desktop\hevy-mcp\packages\node\src\cli.ts"
+			],
+			"env": {
+				"HEVY_WAREHOUSE_DB": "C:\Users\astro\OneDrive\Desktop\hevy-mcp\hevy-warehouse.db"
+			}
+		}
+	}
+}

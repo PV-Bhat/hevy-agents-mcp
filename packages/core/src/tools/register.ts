@@ -8,6 +8,7 @@ import { userToolDefinitions } from "./user.js";
 import { routineDiscoveryToolDefinitions } from "./routine-discovery.js";
 import { workflowToolDefinitions } from "./workflows.js";
 import { workoutToolDefinitions } from "./workouts.js";
+import { warehouseToolDefinitions } from "./warehouse.js";
 import type { ToolRuntime } from "./tool-runtime.js";
 
 export const hevyToolDefinitions = [
@@ -21,6 +22,12 @@ export const hevyToolDefinitions = [
 	...routineDiscoveryToolDefinitions,
 ] as const;
 
+/**
+ * Warehouse tools are registered only when a local warehouse is configured,
+ * so a pass-through server advertises exactly the tools it can honor.
+ */
+export const warehouseToolDefinitionList = warehouseToolDefinitions;
+
 /** Register every Hevy tool in its production ordering. */
 export function registerHevyTools(
 	server: McpServer,
@@ -28,5 +35,10 @@ export function registerHevyTools(
 ): void {
 	for (const definition of hevyToolDefinitions) {
 		registerToolDefinition(server, runtime, definition);
+	}
+	if (runtime.warehouse) {
+		for (const definition of warehouseToolDefinitions) {
+			registerToolDefinition(server, runtime, definition);
+		}
 	}
 }

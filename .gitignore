@@ -142,3 +142,11 @@ dist
 .env.sentry-build-plugin
 .aider*
 .dev.vars
+
+# Local warehouse database
+*.db
+*.db-wal
+*.db-shm
+
+# Local MCP client config: machine-specific paths and key location
+.mcp.json

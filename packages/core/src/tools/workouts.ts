@@ -1,32 +1,30 @@
+/**
+ * Workout tools are READ-ONLY in hevy-agents-mcp.
+ *
+ * Upstream hevy-mcp also exposes create-workout and update-workout. They are
+ * removed here on purpose: this server exists to analyse a training record,
+ * and a tool that cannot alter that record is easier to trust. Routine,
+ * folder, template and body-measurement writes remain, since those are
+ * additive rather than destructive to logged history.
+ */
 import { z } from "zod";
 import type {
 	GetV1Workouts200,
 	GetV1WorkoutsCount200,
 	GetV1WorkoutsEvents200,
 	GetV1WorkoutsWorkoutid200,
-	PostV1Workouts201,
-	PutV1WorkoutsWorkoutid200,
 } from "@hevy-mcp/hevy-client/types";
-import { buildWorkoutPayload } from "./payload-mappers.js";
-import {
-	paginationShape,
-	nonEmptyId,
-	workoutPayloadShape,
-} from "./input-schemas.js";
+import { paginationShape, nonEmptyId } from "./input-schemas.js";
 import type { ToolDefinition } from "./define-tool.js";
 import type { ToolRuntime } from "./tool-runtime.js";
 import {
-	createWorkoutResponse,
-	updateWorkoutResponse,
 	workoutCountResponse,
 	workoutEventsResponse,
 	workoutResponse,
 	workoutsResponse,
 } from "../utils/response-formatter.js";
 import {
-	createAnnotations,
 	readOnlyAnnotations,
-	updateAnnotations,
 } from "../utils/tool-annotations.js";
 import { describeTool } from "../utils/tool-descriptions.js";
 import type { InferToolParams } from "../utils/tool-helpers.js";
@@ -51,14 +49,7 @@ const getWorkoutEventsSchema = {
 } as const;
 type GetWorkoutEventsParams = InferToolParams<typeof getWorkoutEventsSchema>;
 
-const createWorkoutSchema = workoutPayloadShape;
-type CreateWorkoutParams = InferToolParams<typeof createWorkoutSchema>;
 
-const updateWorkoutSchema = {
-	workoutId: nonEmptyId,
-	...workoutPayloadShape,
-} as const;
-type UpdateWorkoutParams = InferToolParams<typeof updateWorkoutSchema>;
 
 export const workoutToolDefinitions = [
 	{
@@ -210,58 +201,6 @@ export const workoutToolDefinitions = [
 				}
 				throw error;
 			}
-		},
-	},
-	{
-		name: "create-workout",
-		feature: "workouts" as const,
-		operation: "create" as const,
-		description: describeTool({
-			summary: "Writes to the Hevy account by creating a new workout.",
-			aliases: ["log workout", "add workout", "record training session"],
-			useCase:
-				"Use to add a completed workout; use update-workout only when modifying an existing workout ID.",
-			importantNotes:
-				"Requires UTC startTime/endTime in YYYY-MM-DDTHH:mm:ssZ form and exercise template IDs. Retrying can create duplicates.",
-		}),
-		inputSchema: createWorkoutSchema,
-		annotations: createAnnotations("Create Workout"),
-		kind: "write" as const,
-		responseContract: createWorkoutResponse,
-		execute: async (runtime: ToolRuntime, args: CreateWorkoutParams) => {
-			const data: PostV1Workouts201 = await runtime.getClient().createWorkout({
-				workout: buildWorkoutPayload(args),
-			});
-			return data;
-		},
-	},
-	{
-		name: "update-workout",
-		feature: "workouts" as const,
-		operation: "update" as const,
-		description: describeTool({
-			summary: "Mutates the Hevy account by replacing an existing workout.",
-			aliases: [
-				"edit workout",
-				"correct workout log",
-				"replace workout details",
-			],
-			useCase:
-				"Use to revise a known workout; use create-workout for a new training session.",
-			importantNotes:
-				"Requires workoutId plus the complete title, times, privacy, exercises, and sets payload; omitted optional values may be cleared or defaulted.",
-		}),
-		inputSchema: updateWorkoutSchema,
-		annotations: updateAnnotations("Update Workout"),
-		kind: "write" as const,
-		responseContract: updateWorkoutResponse,
-		execute: async (runtime: ToolRuntime, args: UpdateWorkoutParams) => {
-			const data: PutV1WorkoutsWorkoutid200 = await runtime
-				.getClient()
-				.updateWorkout(args.workoutId, {
-					workout: buildWorkoutPayload(args),
-				});
-			return { workout: data, workoutId: args.workoutId };
 		},
 	},
 ] satisfies readonly ToolDefinition<Record<string, z.ZodTypeAny>, unknown>[];

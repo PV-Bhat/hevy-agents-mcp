@@ -11,6 +11,7 @@ import type { ToolTelemetryMetadata } from "../utils/tool-taxonomy.js";
 import { memoizeObservationScope, type ToolObserver } from "../observation.js";
 import { bucketCount, getResultTelemetry } from "../utils/result-telemetry.js";
 import { resolveErrorPolicy } from "../utils/error-policy.js";
+import type { SqlDriver } from "@hevy-mcp/warehouse/portable";
 
 const STRUCTURAL_ARGUMENT_KEYS = [
 	"page",
@@ -108,12 +109,28 @@ export type ToolHandlerFactory = <TParams extends Record<string, unknown>>(
 	context: string,
 	metadata?: ToolTelemetryMetadata,
 ) => ToolHandler;
+/**
+ * Access to the local analytical copy of the account's history. Absent when
+ * the server runs in pass-through mode with no warehouse configured, in
+ * which case the warehouse tools are not registered at all.
+ */
+export interface WarehouseAccess {
+	/** Read-only handle for queries. */
+	readonly read: SqlDriver;
+	/** Writable handle for sync. Absent if the warehouse is read-only. */
+	readonly write?: SqlDriver;
+	/** Performs a sync against Hevy; returns a human-readable summary. */
+	sync?(mode: "auto" | "full"): Promise<Record<string, unknown>>;
+}
+
 export interface ToolRuntime {
 	readonly client: HevyClient | null;
 	readonly catalog: ExerciseTemplateCatalog;
 	readonly logger?: McpClientLogger;
 	readonly createHandler: ToolHandlerFactory;
+	readonly warehouse?: WarehouseAccess;
 	getClient(): HevyClient;
+	getWarehouse(): WarehouseAccess;
 }
 
 export interface CreateToolRuntimeOptions {
@@ -122,7 +139,11 @@ export interface CreateToolRuntimeOptions {
 	logger?: McpClientLogger;
 	createHandler?: ToolHandlerFactory;
 	observer?: ToolObserver;
+	warehouse?: WarehouseAccess;
 }
+
+export const WAREHOUSE_NOT_CONFIGURED_ERROR =
+	"No local warehouse is configured. Run the sync CLI, or start the server with a warehouse database path.";
 
 export const defaultHandlerFactory: ToolHandlerFactory = <
 	TParams extends Record<string, unknown>,
@@ -137,6 +158,7 @@ export function createToolRuntime({
 	logger,
 	createHandler = defaultHandlerFactory,
 	observer,
+	warehouse,
 }: CreateToolRuntimeOptions): ToolRuntime {
 	const createObservedHandler: ToolHandlerFactory = <
 		TParams extends Record<string, unknown>,
@@ -206,7 +228,12 @@ export function createToolRuntime({
 		catalog,
 		logger,
 		createHandler: observedHandlerFactory,
+		warehouse,
 		getClient: () => requireClient(client),
+		getWarehouse: () => {
+			if (!warehouse) throw new Error(WAREHOUSE_NOT_CONFIGURED_ERROR);
+			return warehouse;
+		},
 	};
 }
 

@@ -1,30 +1,31 @@
 {
 	"name": "@hevy-mcp/repository",
 	"private": true,
-	"description": "A Model Context Protocol (MCP) server implementation that interfaces with the Hevy fitness tracking app and its API.",
+	"description": "Agent-native MCP server for Hevy: your complete training history as a queryable local database, plus safe read/write access to routines and templates.",
 	"keywords": [
+		"agent",
+		"analytics",
 		"api",
-		"exercise",
 		"fitness",
 		"fitness-tracker",
-		"health",
 		"hevy",
 		"mcp",
 		"model context protocol",
-		"training",
-		"workout",
-		"workout-planner",
+		"sqlite",
+		"strength-training",
+		"text-to-sql",
+		"training-data",
 		"workout-tracker"
 	],
-	"homepage": "https://github.com/chrisdoc/hevy-mcp#readme",
+	"homepage": "https://github.com/PV-Bhat/hevy-agents-mcp#readme",
 	"bugs": {
-		"url": "https://github.com/chrisdoc/hevy-mcp/issues"
+		"url": "https://github.com/PV-Bhat/hevy-agents-mcp/issues"
 	},
 	"license": "MIT",
-	"author": "Christoph Kieslich",
+	"author": "Pruthvi Bhat",
 	"repository": {
 		"type": "git",
-		"url": "git+https://github.com/chrisdoc/hevy-mcp.git"
+		"url": "git+https://github.com/PV-Bhat/hevy-agents-mcp.git"
 	},
 	"directories": {
 		"doc": "docs",
@@ -53,8 +54,8 @@
 		"test:coverage": "npm run test:unit -- --coverage --coverage.reportsDirectory=coverage/unit && npm run test:mcp -- --coverage --coverage.reportsDirectory=coverage/mocked",
 		"test:pr": "npm run test:unit && npm run test:mcp && npm run test:contract && npm run test:stdio && npm run test:worker && npm run test:worker-http && npm run test:pack",
 		"openapi": "node ./scripts/openapi-spec.js",
-		"build": "npm run build --workspace hevy-mcp",
-		"build:standalone": "npm run build:standalone --workspace hevy-mcp",
+		"build": "npm run build --workspace hevy-agents-mcp",
+		"build:standalone": "npm run build:standalone --workspace hevy-agents-mcp",
 		"build:client": "npm run build:client --workspace @hevy-mcp/hevy-client && npx prettier --ignore-unknown --write packages/hevy-client/src/generated",
 		"prepack": "npm run check:server-manifest && npm run build",
 		"start": "node --env-file .env packages/node/dist/cli.mjs",
@@ -127,7 +128,7 @@
 		"zod": "^4.4.3"
 	},
 	"engines": {
-		"node": ">=20.0.0"
+		"node": ">=22.5.0"
 	},
 	"allowScripts": {
 		"@sentry/cli@2.58.6": true,
@@ -136,5 +137,8 @@
 		"fsevents@2.3.3": true,
 		"workerd@1.20260722.1": true
 	},
-	"mcpName": "io.github.chrisdoc/hevy-mcp"
+	"mcpName": "io.github.PV-Bhat/hevy-agents-mcp",
+	"contributors": [
+		"Christoph Kieslich (original hevy-mcp)"
+	]
 }

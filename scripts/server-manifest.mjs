@@ -4,7 +4,7 @@ import { pathToFileURL } from "node:url";
 
 const manifestSchema =
 	"https://static.modelcontextprotocol.io/schemas/2025-12-11/server.schema.json";
-const repositoryUrl = "https://github.com/chrisdoc/hevy-mcp";
+const repositoryUrl = "https://github.com/PV-Bhat/hevy-agents-mcp";
 
 function assert(condition, message) {
 	if (!condition) {
@@ -45,12 +45,12 @@ async function resolvePackageMetadata(rootDir) {
 
 function validatePackageJson(packageJson) {
 	assert(
-		packageJson?.name === "hevy-mcp",
-		"package.json name must be hevy-mcp",
+		packageJson?.name === "hevy-agents-mcp",
+		"package.json name must be hevy-agents-mcp",
 	);
 	assert(
-		packageJson.mcpName === "io.github.chrisdoc/hevy-mcp",
-		"package.json mcpName must be io.github.chrisdoc/hevy-mcp",
+		packageJson.mcpName === "io.github.PV-Bhat/hevy-agents-mcp",
+		"package.json mcpName must be io.github.PV-Bhat/hevy-agents-mcp",
 	);
 	assert(
 		typeof packageJson.version === "string" && packageJson.version.length > 0,
@@ -78,7 +78,7 @@ function validateManifestShape(manifest) {
 	);
 	assert(
 		manifest.description ===
-			"MCP server for managing workouts, routines, and exercise data through the Hevy API",
+			"Query your entire Hevy training history as a local SQL database, and manage routines and exercise templates.",
 		"server.json has an unexpected description",
 	);
 	assert(

@@ -1,5 +1,5 @@
 {
-	"name": "@hevy-mcp/core",
+	"name": "@hevy-mcp/warehouse",
 	"version": "0.0.0",
 	"private": true,
 	"type": "module",
@@ -7,16 +7,14 @@
 		".": {
 			"types": "./src/index.ts",
 			"import": "./src/index.ts"
+		},
+		"./portable": {
+			"types": "./src/portable.ts",
+			"import": "./src/portable.ts"
 		}
 	},
 	"scripts": {
 		"build": "tsc --noEmit -p tsconfig.json",
 		"check:types": "tsc --noEmit -p tsconfig.json"
-	},
-	"dependencies": {
-		"@hevy-mcp/hevy-client": "*",
-		"@modelcontextprotocol/sdk": "^1.29.0",
-		"zod": "^4.4.3",
-		"@hevy-mcp/warehouse": "*"
 	}
 }

@@ -26,7 +26,6 @@ const READ_ONLY_TOOLS = [
 ] as const;
 
 const CREATE_TOOLS = [
-	"create-workout",
 	"create-routine",
 	"create-exercise-template",
 	"create-routine-folder",
@@ -34,7 +33,6 @@ const CREATE_TOOLS = [
 ] as const;
 
 const UPDATE_TOOLS = [
-	"update-workout",
 	"update-routine",
 	"update-body-measurement",
 ] as const;

@@ -1,10 +1,10 @@
 {
-	"name": "hevy-mcp",
+	"name": "hevy-agents-mcp",
 	"version": "3.4.1",
 	"private": false,
-	"description": "A Model Context Protocol (MCP) server implementation that interfaces with the Hevy fitness tracking app and its API.",
+	"description": "Agent-native MCP server for Hevy: your complete training history as a queryable local database, plus safe read/write access to routines and templates.",
 	"bin": {
-		"hevy-mcp": "dist/cli.mjs"
+		"hevy-agents-mcp": "dist/cli.mjs"
 	},
 	"files": [
 		"dist",
@@ -46,13 +46,16 @@
 	"devDependencies": {
 		"@hevy-mcp/core": "*",
 		"@hevy-mcp/hevy-client": "*",
+		"@hevy-mcp/warehouse": "*",
 		"@types/node": "^26.0.0",
 		"cross-env": "^10.1.0",
 		"tsdown": "^0.22.2",
 		"typescript": "^7.0.2"
 	},
 	"engines": {
-		"node": ">=20.0.0"
+		"node": ">=22.5.0"
 	},
-	"mcpName": "io.github.chrisdoc/hevy-mcp"
+	"mcpName": "io.github.PV-Bhat/hevy-agents-mcp",
+	"homepage": "https://github.com/PV-Bhat/hevy-agents-mcp#readme",
+	"author": "Pruthvi Bhat"
 }

@@ -9,6 +9,17 @@ const root = resolve(dirname(fileURLToPath(import.meta.url)), "..");
 
 export const packageRules = new Map([
 	[
+		"packages/warehouse",
+		{
+			allowed: new Map(),
+			forbidden: ["@cloudflare/", "cloudflare:", "@sentry/", "@opentelemetry/"],
+			// node:sqlite lives behind the package root; the portable entry
+			// point is imported by core and, later, the Cloudflare Worker.
+			rejectBuiltins: false,
+			rejectDynamicImports: true,
+		},
+	],
+	[
 		"packages/hevy-client",
 		{
 			allowed: new Map(),
@@ -22,6 +33,9 @@ export const packageRules = new Map([
 		{
 			allowed: new Map([
 				["@hevy-mcp/hevy-client", new Set(["", "types", "schemas"])],
+				// Portable only: the package root pulls in node:sqlite, which
+				// would break the Worker build and the Durable Object path.
+				["@hevy-mcp/warehouse", new Set(["portable"])],
 			]),
 			forbidden: ["@cloudflare/", "cloudflare:", "@sentry/", "@opentelemetry/"],
 			rejectBuiltins: true,
@@ -34,6 +48,7 @@ export const packageRules = new Map([
 			allowed: new Map([
 				["@hevy-mcp/core", new Set([""])],
 				["@hevy-mcp/hevy-client", new Set([""])],
+				["@hevy-mcp/warehouse", new Set(["", "portable"])],
 			]),
 			forbidden: ["@cloudflare/", "cloudflare:"],
 			rejectBuiltins: false,
@@ -46,6 +61,7 @@ export const packageRules = new Map([
 			allowed: new Map([
 				["@hevy-mcp/core", new Set([""])],
 				["@hevy-mcp/hevy-client", new Set([""])],
+				["@hevy-mcp/warehouse", new Set(["portable"])],
 			]),
 			forbidden: ["@sentry/", "@opentelemetry/"],
 			rejectBuiltins: true,
@@ -62,6 +78,7 @@ const internalPackages = [
 	"@hevy-mcp/core",
 	"hevy-mcp",
 	"@hevy-mcp/worker",
+	"@hevy-mcp/warehouse",
 ];
 
 export function findRetiredRootSourceFiles(files, projectRoot) {

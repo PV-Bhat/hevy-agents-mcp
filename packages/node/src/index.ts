@@ -15,6 +15,7 @@ import { createHmac } from "node:crypto";
 import { StdioServerTransport } from "@modelcontextprotocol/sdk/server/stdio.js";
 import { z } from "zod";
 import { createHevyMcpServer } from "@hevy-mcp/core";
+import { openWarehouse, resolveWarehousePath } from "./utils/warehouse.js";
 import { createHevyClient, isHevyHttpError } from "@hevy-mcp/hevy-client";
 import { assertApiKey, parseConfig } from "./utils/config.js";
 import { installGracefulShutdown } from "./utils/graceful-shutdown.js";
@@ -175,7 +176,19 @@ function buildServer(apiKey: string) {
 		},
 		(span) => {
 			try {
+				const warehousePath = resolveWarehousePath();
+				const warehouse = warehousePath
+					? openWarehouse({
+							path: warehousePath,
+							apiKey,
+							timezone: process.env.HEVY_WAREHOUSE_TZ?.trim() || undefined,
+						})
+					: undefined;
+				if (warehouse) {
+					console.error(`Local training warehouse opened at ${warehousePath}`);
+				}
 				const server = createHevyMcpServer({
+					warehouse,
 					createClient: ({ onLog }) =>
 						createHevyClient({
 							apiKey,

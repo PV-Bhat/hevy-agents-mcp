@@ -5,10 +5,13 @@
 ## Project Overview
 
 - **hevy-mcp** is a Model Context Protocol (MCP) server for the Hevy Fitness API, enabling AI agents to manage workouts, routines, exercise templates, and folders via the Hevy API.
-- The codebase is TypeScript (Node.js v24+) organized as four workspaces: the
+- The codebase is TypeScript (Node.js v24+) organized as five workspaces: the
   runtime-neutral `@hevy-mcp/hevy-client` and `@hevy-mcp/core` packages, the
-  Node package in `packages/node`, and the Cloudflare package in
-  `packages/worker`. All implementation lives under `packages/*`; the root is
+  Node package in `packages/node`, the Cloudflare package in
+  `packages/worker`, and the optional analytical warehouse in
+  `packages/warehouse`. The warehouse exposes two entry points: the package
+  root, which owns the `node:sqlite` driver, and `/portable`, which must stay
+  free of Node builtins because `packages/core` and the Worker import it. All implementation lives under `packages/*`; the root is
   a private workspace orchestrator and must not gain a runtime `src/` tree.
 - API client code is generated from the OpenAPI spec using [Kubb](https://kubb.dev/). **Do not manually edit generated files.**
 - **Type Safety:** The project uses Zod schema inference for type-safe tool parameters, eliminating manual type assertions and ensuring compile-time type safety.
