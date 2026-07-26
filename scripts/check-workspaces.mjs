@@ -1,11 +1,13 @@
-import { readFile } from "node:fs/promises";
-import { resolve } from "node:path";
+﻿import { readFile } from "node:fs/promises";
+import { dirname, resolve } from "node:path";
+import { fileURLToPath } from "node:url";
 
-const root = resolve(new URL("..", import.meta.url).pathname);
+const root = resolve(dirname(fileURLToPath(import.meta.url)), "..");
 const expected = new Map([
 	["packages/hevy-client", { name: "@hevy-mcp/hevy-client", private: true }],
 	["packages/core", { name: "@hevy-mcp/core", private: true }],
-	["packages/node", { name: "hevy-mcp", private: false }],
+	["packages/warehouse", { name: "@hevy-mcp/warehouse", private: true }],
+	["packages/node", { name: "hevy-agents-mcp", private: false }],
 	["packages/worker", { name: "@hevy-mcp/worker", private: true }],
 ]);
 

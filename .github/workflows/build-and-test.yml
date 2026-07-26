@@ -72,6 +72,9 @@ jobs:
           - name: Check server manifest
             run: npm run check:server-manifest
 
+          - name: Check distribution manifests
+            run: npm run check:distribution
+
           - name: Run Check
             run: npm run check
 

@@ -2,7 +2,7 @@
 	"$schema": "https://static.modelcontextprotocol.io/schemas/2025-12-11/server.schema.json",
 	"name": "io.github.PV-Bhat/hevy-agents-mcp",
 	"title": "Hevy MCP Server",
-	"description": "Query your entire Hevy training history as a local SQL database, and manage routines and exercise templates.",
+	"description": "Agent-native Hevy connector: full training history as a private local SQL warehouse, plus safe routine and template tools.",
 	"repository": {
 		"url": "https://github.com/PV-Bhat/hevy-agents-mcp",
 		"source": "github"
@@ -22,6 +22,18 @@
 					"description": "API key for authenticating with the Hevy API",
 					"isRequired": true,
 					"isSecret": true
+				},
+				{
+					"name": "HEVY_WAREHOUSE_DB",
+					"description": "Path to the local SQLite warehouse, or auto for ~/.hevy-agents-mcp/hevy-warehouse.db",
+					"isRequired": false,
+					"isSecret": false
+				},
+				{
+					"name": "HEVY_WAREHOUSE_TZ",
+					"description": "IANA timezone for day and week bucketing",
+					"isRequired": false,
+					"isSecret": false
 				}
 			]
 		}

@@ -68,7 +68,7 @@ const defaultSchedulerDependencies: SchedulerDependencies = {
 function getCachePath(dependencies: VersionCheckDependencies): string {
 	const cacheRoot =
 		dependencies.env.XDG_CACHE_HOME || join(dependencies.homedir(), ".cache");
-	return join(cacheRoot, "hevy-mcp", "update-check.json");
+	return join(cacheRoot, "hevy-agents-mcp", "update-check.json");
 }
 
 function parseCacheEntry(value: string, now: number): CacheEntry | undefined {

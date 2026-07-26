@@ -1,0 +1,37 @@
+{
+  "name": "hevy",
+  "version": "3.4.1",
+  "description": "Agent-native HEVY connector with complete-history analytics, a private local training warehouse, and safe routine and template management.",
+  "author": {
+    "name": "Pruthvi Bhat",
+    "url": "https://github.com/PV-Bhat"
+  },
+  "homepage": "https://github.com/PV-Bhat/hevy-agents-mcp",
+  "repository": "https://github.com/PV-Bhat/hevy-agents-mcp",
+  "license": "MIT",
+  "keywords": [
+    "hevy",
+    "fitness",
+    "workouts",
+    "training-analytics",
+    "mcp",
+    "agents"
+  ],
+  "skills": "./skills/",
+  "interface": {
+    "displayName": "Hevy Agents",
+    "shortDescription": "Your complete HEVY history, built for agents.",
+    "longDescription": "A local-first HEVY connector for ChatGPT and Codex. It combines safe access to workouts, routines, templates, folders, measurements, and profile data with a private SQLite warehouse that lets agents query years of training history in one read-only SQL call.",
+    "developerName": "Pruthvi Bhat",
+    "category": "Health & Fitness",
+    "capabilities": ["Read", "Write", "Analytics", "Local-first"],
+    "websiteURL": "https://github.com/PV-Bhat/hevy-agents-mcp",
+    "defaultPrompt": [
+      "Summarize my recent HEVY training.",
+      "Show my personal records and progression.",
+      "Review my routines without changing them."
+    ],
+    "brandColor": "#F05A28"
+  },
+  "mcpServers": "./.mcp.json"
+}

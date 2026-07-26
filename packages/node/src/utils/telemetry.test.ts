@@ -188,7 +188,7 @@ describe("telemetry initialization", () => {
 		expect(mod.tracer).toBeDefined();
 		expect(mod.meter).toBeDefined();
 		expect(mod.Sentry).toBeDefined();
-		expect(mod.serviceName).toBe("hevy-mcp");
+		expect(mod.serviceName).toBe("hevy-agents-mcp");
 		expect(mod.serviceVersion).toBe("dev");
 	});
 	it("adds the current user hash to every started span", async () => {

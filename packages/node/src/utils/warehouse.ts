@@ -7,9 +7,9 @@
  * through the GET-only HTTP client, so it cannot modify the Hevy account
  * either.
  */
-import { existsSync } from "node:fs";
-import { dirname, resolve } from "node:path";
-import { mkdirSync } from "node:fs";
+import { existsSync, mkdirSync } from "node:fs";
+import { homedir } from "node:os";
+import { dirname, join, resolve } from "node:path";
 import type { WarehouseAccess } from "@hevy-mcp/core";
 import {
 	createNodeDriver,
@@ -22,10 +22,24 @@ import {
 
 export const WAREHOUSE_PATH_ENV = "HEVY_WAREHOUSE_DB";
 export const WAREHOUSE_TZ_ENV = "HEVY_WAREHOUSE_TZ";
+export const AUTO_WAREHOUSE_PATH = "auto";
+export const AUTO_WAREHOUSE_DIRECTORY = ".hevy-agents-mcp";
+export const AUTO_WAREHOUSE_FILENAME = "hevy-warehouse.db";
 
-export function resolveWarehousePath(): string | undefined {
-	const configured = process.env[WAREHOUSE_PATH_ENV]?.trim();
-	return configured ? resolve(configured) : undefined;
+export function resolveWarehousePath(
+	env: NodeJS.ProcessEnv = process.env,
+	userHome: string = homedir(),
+): string | undefined {
+	const configured = env[WAREHOUSE_PATH_ENV]?.trim();
+	if (!configured) return undefined;
+	if (configured.toLowerCase() === AUTO_WAREHOUSE_PATH) {
+		return join(
+			userHome,
+			AUTO_WAREHOUSE_DIRECTORY,
+			AUTO_WAREHOUSE_FILENAME,
+		);
+	}
+	return resolve(configured);
 }
 
 function systemTimezone(): string {

@@ -1,7 +1,7 @@
 const PREFIX = "HEVY_PERFORMANCE_FIXTURE_RESULT=";
 const API_BASE = "https://api.hevyapp.com";
 const API_KEY = "performance-fixture-api-key";
-const EXPECTED_UPDATE_CHECK_URL = "https://registry.npmjs.org/hevy-mcp";
+const EXPECTED_UPDATE_CHECK_URL = "https://registry.npmjs.org/hevy-agents-mcp";
 const MODES = new Set([
 	"startup",
 	"tools-list",

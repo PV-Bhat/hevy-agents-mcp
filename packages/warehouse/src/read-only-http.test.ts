@@ -55,8 +55,14 @@ describe("write guard", () => {
 		const fetchImpl = vi.fn(async () => jsonResponse({}));
 		const guarded = createGuardedFetch(fetchImpl);
 		await guarded(new Request("https://api.hevyapp.com/v1/workouts"));
-		const init = fetchImpl.mock.calls[0]?.[1] as RequestInit;
-		expect(init.method).toBe("GET");
+		const firstCall = fetchImpl.mock.calls[0] as unknown as
+			| [input: RequestInfo | URL, init?: RequestInit]
+			| undefined;
+		expect(firstCall).toBeDefined();
+		if (!firstCall) {
+			throw new Error("expected a fetch call");
+		}
+		expect(firstCall[1]?.method).toBe("GET");
 	});
 
 	it("names the blocked method and url in the error", () => {
@@ -73,12 +79,20 @@ describe("read-only http client", () => {
 		const http = createReadOnlyHttp({ apiKey: "test-key", fetchImpl });
 		const result = await http.get("/v1/workouts", { page: 2, pageSize: 10 });
 		expect(result).toEqual({ ok: true });
-		const [url, init] = fetchImpl.mock.calls[0] as [URL, RequestInit];
-		expect(url.href).toBe(
+		const call = fetchImpl.mock.calls[0] as unknown as
+			| [input: RequestInfo | URL, init?: RequestInit]
+			| undefined;
+		expect(call).toBeDefined();
+		if (!call) {
+			throw new Error("expected a fetch call");
+		}
+		const [input, init] = call;
+		expect(input).toBeInstanceOf(URL);
+		expect((input as URL).href).toBe(
 			"https://api.hevyapp.com/v1/workouts?page=2&pageSize=10",
 		);
-		expect(new Headers(init.headers).get("api-key")).toBe("test-key");
-		expect(init.method).toBe("GET");
+		expect(new Headers(init?.headers).get("api-key")).toBe("test-key");
+		expect(init?.method).toBe("GET");
 	});
 
 	it("retries a 429 and then succeeds", async () => {
