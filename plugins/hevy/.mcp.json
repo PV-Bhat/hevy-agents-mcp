@@ -1,0 +1,13 @@
+{
+  "mcpServers": {
+    "hevy": {
+      "command": "npx",
+      "args": ["-y", "hevy-agents-mcp@3.4.1"],
+      "env_vars": ["HEVY_API_KEY"],
+      "env": {
+        "HEVY_WAREHOUSE_DB": "auto",
+        "HEVY_MCP_TELEMETRY": "0"
+      }
+    }
+  }
+}

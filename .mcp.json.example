@@ -1,12 +1,11 @@
 {
 	"mcpServers": {
-		"hevy-warehouse": {
+		"hevy": {
 			"command": "npx",
-			"args": ["-y", "hevy-mcp"],
+			"args": ["-y", "hevy-agents-mcp"],
 			"env": {
 				"HEVY_API_KEY": "your-hevy-api-key",
-				"HEVY_WAREHOUSE_DB": "./hevy-warehouse.db",
-				"HEVY_WAREHOUSE_TZ": "Europe/Copenhagen"
+				"HEVY_WAREHOUSE_DB": "auto"
 			}
 		}
 	}

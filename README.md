@@ -91,66 +91,57 @@ exercise-template writes remain, since those are additive and non-destructive.
 Bug fixes that apply to the shared foundation are sent upstream rather than kept
 here.
 
-## Quick start
+## Install in 60 seconds
 
-Requires **Node >= 22.5** (for the built-in `node:sqlite` module) and a Hevy API
-key, which needs **Hevy PRO**. Get one at Hevy → Settings → Developer.
+Requires **Node >= 22.5** and a **Hevy PRO** API key
+(Hevy > Settings > Developer).
 
-### 1. Install and import your history
-
-```bash
-git clone https://github.com/PV-Bhat/hevy-agents-mcp.git && cd hevy-agents-mcp && npm install
-```
-
-Put your key in `.env`:
+### ChatGPT / Codex
 
 ```bash
-echo "HEVY_API_KEY=your-hevy-api-key" > .env
+codex plugin marketplace add PV-Bhat/hevy-agents-mcp
 ```
 
-Check the key and see how big the import will be:
+Open **Plugins**, install **Hevy Agents**, then put your key in
+`~/.codex/.env` (Windows: `%USERPROFILE%\.codex\.env`):
 
-```bash
-node --env-file=.env packages/warehouse/src/cli.ts probe
+```dotenv
+HEVY_API_KEY=your-hevy-api-key
 ```
 
-Then import. Roughly one request per ten workouts — a 1,000-workout account
-takes about two minutes:
+Restart Codex and start a new chat. That is the only secret you need.
+The warehouse is created automatically at
+`~/.hevy-agents-mcp/hevy-warehouse.db`.
 
-```bash
-node --env-file=.env packages/warehouse/src/cli.ts sync
-```
-
-### 2. Connect your client
-
-Add to your MCP client configuration:
+### Any MCP client
 
 ```json
 {
-	"mcpServers": {
-		"hevy-agents": {
-			"command": "npx",
-			"args": ["-y", "hevy-agents-mcp"],
-			"env": {
-				"HEVY_API_KEY": "your-hevy-api-key",
-				"HEVY_WAREHOUSE_DB": "/absolute/path/to/hevy-warehouse.db"
-			}
-		}
-	}
+  "mcpServers": {
+    "hevy": {
+      "command": "npx",
+      "args": ["-y", "hevy-agents-mcp"],
+      "env": {
+        "HEVY_API_KEY": "your-hevy-api-key",
+        "HEVY_WAREHOUSE_DB": "auto"
+      }
+    }
+  }
 }
 ```
 
-See [`.mcp.json.example`](./.mcp.json.example). Without `HEVY_WAREHOUSE_DB` the
-server still runs as a plain Hevy connector, and the warehouse tools are simply
-not registered.
+See [`.mcp.json.example`](./.mcp.json.example). Set
+`HEVY_WAREHOUSE_DB=auto` for a private local warehouse, a custom path for a
+specific file, or omit it to run as a plain Hevy connector.
 
 ### Configuration
 
 | Variable | Required | Meaning |
 | --- | --- | --- |
 | `HEVY_API_KEY` | yes | Your Hevy API key. |
-| `HEVY_WAREHOUSE_DB` | to enable the warehouse | Path to the SQLite file. Created if absent. |
-| `HEVY_WAREHOUSE_TZ` | no | IANA zone for day and week bucketing. Defaults to the system zone. Changing it recomputes stored dates on next start. |
+| `HEVY_WAREHOUSE_DB` | for analytics | Warehouse path, or `auto` for `~/.hevy-agents-mcp/hevy-warehouse.db`. |
+| `HEVY_WAREHOUSE_TZ` | no | IANA zone for day/week bucketing. Defaults to system zone. |
+| `HEVY_MCP_TELEMETRY` | no | Set to `0` to disable diagnostics exporters. |
 
 ## Tools
 

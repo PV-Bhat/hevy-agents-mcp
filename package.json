@@ -1,7 +1,7 @@
 {
 	"name": "@hevy-mcp/repository",
 	"private": true,
-	"description": "Agent-native MCP server for Hevy: your complete training history as a queryable local database, plus safe read/write access to routines and templates.",
+	"description": "The agent-native Hevy server: full training history as a private local database, built on hevy-mcp for modern LLM agents.",
 	"keywords": [
 		"agent",
 		"analytics",
@@ -15,7 +15,9 @@
 		"strength-training",
 		"text-to-sql",
 		"training-data",
-		"workout-tracker"
+		"workout-tracker",
+		"agents",
+		"local-first"
 	],
 	"homepage": "https://github.com/PV-Bhat/hevy-agents-mcp#readme",
 	"bugs": {
@@ -71,8 +73,8 @@
 		"check:changeset": "changeset status --since=origin/main && node scripts/check-release-candidates.mjs",
 		"check:server-manifest": "node scripts/server-manifest.mjs check",
 		"sync:server-manifest": "node scripts/server-manifest.mjs sync",
-		"version:changesets": "changeset version && npm run sync:server-manifest",
-		"version": "npm run sync:server-manifest && git add server.json packages/node/server.json",
+		"version:changesets": "changeset version && npm run sync:server-manifest && npm run sync:distribution",
+		"version": "npm run sync:server-manifest && npm run sync:distribution && git add server.json packages/node/server.json plugins/hevy/.codex-plugin/plugin.json plugins/hevy/.mcp.json",
 		"version:patch": "npm version patch",
 		"version:minor": "npm version minor",
 		"version:major": "npm version major",
@@ -80,7 +82,9 @@
 		"commit": "commit",
 		"worker:dev": "wrangler dev",
 		"worker:deploy": "wrangler deploy",
-		"worker:dry-run": "wrangler deploy --dry-run --outdir .wrangler/dry-run && node scripts/check-worker-bundle.mjs"
+		"worker:dry-run": "wrangler deploy --dry-run --outdir .wrangler/dry-run && node scripts/check-worker-bundle.mjs",
+		"check:distribution": "node scripts/distribution-manifest.mjs check",
+		"sync:distribution": "node scripts/distribution-manifest.mjs sync"
 	},
 	"devDependencies": {
 		"@changesets/changelog-github": "^0.7.0",

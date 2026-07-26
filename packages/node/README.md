@@ -27,24 +27,38 @@ Full documentation:
 
 ## Install
 
+### ChatGPT / Codex
+
+```bash
+codex plugin marketplace add PV-Bhat/hevy-agents-mcp
+```
+
+Install **Hevy Agents** from Plugins, then set only:
+
+```dotenv
+HEVY_API_KEY=your-hevy-api-key
+```
+
+in `~/.codex/.env` and restart. The local warehouse is enabled automatically.
+
+### Any MCP client
+
 ```bash
 npx -y hevy-agents-mcp
 ```
 
-Add to your MCP client configuration:
-
 ```json
 {
-	"mcpServers": {
-		"hevy-agents": {
-			"command": "npx",
-			"args": ["-y", "hevy-agents-mcp"],
-			"env": {
-				"HEVY_API_KEY": "your-hevy-api-key",
-				"HEVY_WAREHOUSE_DB": "/absolute/path/to/hevy-warehouse.db"
-			}
-		}
-	}
+  "mcpServers": {
+    "hevy": {
+      "command": "npx",
+      "args": ["-y", "hevy-agents-mcp"],
+      "env": {
+        "HEVY_API_KEY": "your-hevy-api-key",
+        "HEVY_WAREHOUSE_DB": "auto"
+      }
+    }
+  }
 }
 ```
 
@@ -55,23 +69,23 @@ Restart or reconnect your client after saving its configuration.
 | Variable | Required | Meaning |
 | --- | --- | --- |
 | `HEVY_API_KEY` | yes | Your Hevy API key. |
-| `HEVY_WAREHOUSE_DB` | to enable the warehouse | Path to the SQLite file. Created if absent. |
+| `HEVY_WAREHOUSE_DB` | for analytics | Warehouse path, or `auto` for `~/.hevy-agents-mcp/hevy-warehouse.db`. |
 | `HEVY_WAREHOUSE_TZ` | no | IANA zone for day and week bucketing. Defaults to the system zone. |
+| `HEVY_MCP_TELEMETRY` | no | Set to `0` to disable diagnostics exporters. |
 
 Without `HEVY_WAREHOUSE_DB` the server runs as a plain Hevy connector and the
 warehouse tools are not registered.
 
 ### First import
 
-Clone the repository and run the sync CLI once — roughly one request per ten
-workouts, so a 1,000-workout account takes about two minutes:
+With the warehouse enabled, ask the agent to sync training history, or run:
 
 ```bash
-node --env-file=.env packages/warehouse/src/cli.ts sync
+HEVY_API_KEY=your-key HEVY_WAREHOUSE_DB=auto npx hevy-agents-mcp
 ```
 
-Afterwards the server keeps itself current through the `sync-training-history`
-tool, which applies only what changed.
+and call `sync-training-history`. A 1,000-workout account takes about two
+minutes on first import; later syncs only apply changes.
 
 ## Tools
 

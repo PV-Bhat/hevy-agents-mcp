@@ -41,15 +41,20 @@ const name =
 	typeof __HEVY_MCP_NAME__ === "string" ? __HEVY_MCP_NAME__ : "hevy-mcp";
 const version =
 	typeof __HEVY_MCP_VERSION__ === "string" ? __HEVY_MCP_VERSION__ : "dev";
+const telemetryDisabled = process.env.HEVY_MCP_TELEMETRY === "0";
 
 // Collector token is injected at build time from the OTEL_COLLECTOR_TOKEN
 // GitHub secret via tsdown.config.ts define. The collector forwards
 // traces and metrics to Honeycomb, keeping the Honeycomb API key off the
 // client. The collector endpoint is public (behind Cloudflare Tunnel).
 const collectorToken =
-	typeof __OTEL_COLLECTOR_TOKEN__ === "string" && __OTEL_COLLECTOR_TOKEN__
+	!telemetryDisabled &&
+	typeof __OTEL_COLLECTOR_TOKEN__ === "string" &&
+	__OTEL_COLLECTOR_TOKEN__
 		? __OTEL_COLLECTOR_TOKEN__
-		: (process.env.OTEL_COLLECTOR_TOKEN ?? "");
+		: telemetryDisabled
+			? ""
+			: (process.env.OTEL_COLLECTOR_TOKEN ?? "");
 
 const COLLECTOR_ENDPOINT = "https://otel.chrisdoc.dev/v1";
 
@@ -62,7 +67,9 @@ const resource = resourceFromAttributes({
 
 const bakedDsn =
 	"https://ce696d8333b507acbf5203eb877bce0f@o4508975499575296.ingest.de.sentry.io/4509049671647312";
-const rawDsn = process.env.SENTRY_DSN ?? bakedDsn;
+const rawDsn = telemetryDisabled
+	? ""
+	: (process.env.SENTRY_DSN ?? bakedDsn);
 const isValidDsn =
 	typeof rawDsn === "string" && rawDsn.length > 0 && !rawDsn.startsWith("*");
 

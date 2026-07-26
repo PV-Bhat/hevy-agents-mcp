@@ -2,7 +2,7 @@
 	"name": "hevy-agents-mcp",
 	"version": "3.4.1",
 	"private": false,
-	"description": "Agent-native MCP server for Hevy: your complete training history as a queryable local database, plus safe read/write access to routines and templates.",
+	"description": "The agent-native Hevy server: full training history as a private local database, built on hevy-mcp for modern LLM agents.",
 	"bin": {
 		"hevy-agents-mcp": "dist/cli.mjs"
 	},
@@ -57,5 +57,15 @@
 	},
 	"mcpName": "io.github.PV-Bhat/hevy-agents-mcp",
 	"homepage": "https://github.com/PV-Bhat/hevy-agents-mcp#readme",
-	"author": "Pruthvi Bhat"
+	"author": "Pruthvi Bhat",
+	"keywords": [
+		"hevy",
+		"mcp",
+		"agents",
+		"fitness",
+		"training-analytics",
+		"local-first",
+		"sqlite",
+		"workout-tracker"
+	]
 }

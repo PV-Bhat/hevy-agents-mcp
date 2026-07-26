@@ -1,0 +1,20 @@
+{
+  "name": "hevy-agents",
+  "interface": {
+    "displayName": "Hevy Agents"
+  },
+  "plugins": [
+    {
+      "name": "hevy",
+      "source": {
+        "source": "local",
+        "path": "./plugins/hevy"
+      },
+      "policy": {
+        "installation": "AVAILABLE",
+        "authentication": "ON_INSTALL"
+      },
+      "category": "Health & Fitness"
+    }
+  ]
+}
