@@ -105,7 +105,7 @@ const result = spawnSync(
 	[
 		"pack",
 		"--workspace",
-		"hevy-mcp",
+		"hevy-agents-mcp",
 		"--dry-run",
 		"--json",
 		"--ignore-scripts",
@@ -155,8 +155,8 @@ for (const path of requiredFiles) {
 	}
 }
 
-if (packageJson.bin?.["hevy-mcp"] !== "dist/cli.mjs") {
-	throw new Error("package.json must expose hevy-mcp from dist/cli.mjs");
+if (packageJson.bin?.["hevy-agents-mcp"] !== "dist/cli.mjs") {
+	throw new Error("package.json must expose hevy-agents-mcp from dist/cli.mjs");
 }
 
 for (const section of [
@@ -180,7 +180,8 @@ for (const path of emittedFiles) {
 	const packedText = readFileSync(join("packages/node", path), "utf8");
 	if (
 		packedText.includes("@hevy-mcp/core") ||
-		packedText.includes("@hevy-mcp/hevy-client")
+		packedText.includes("@hevy-mcp/hevy-client") ||
+		packedText.includes("@hevy-mcp/warehouse")
 	) {
 		throw new Error(
 			`Packed artifact contains a private workspace import: ${path}`,
@@ -192,13 +193,13 @@ console.log(
 	`Package smoke passed: ${packResult.files.length} files, ${packResult.size} bytes.`,
 );
 
-const tempDir = mkdtempSync(join(tmpdir(), "hevy-mcp-pack-"));
+const tempDir = mkdtempSync(join(tmpdir(), "hevy-agents-mcp-pack-"));
 try {
 	const packed = runNpm(
 		[
 			"pack",
 			"--workspace",
-			"hevy-mcp",
+			"hevy-agents-mcp",
 			"--pack-destination",
 			tempDir,
 			"--silent",
@@ -225,11 +226,11 @@ try {
 		],
 		{ stdio: "pipe" },
 	);
-	const binaryName = process.platform === "win32" ? "hevy-mcp.cmd" : "hevy-mcp";
+	const binaryName = process.platform === "win32" ? "hevy-agents-mcp.cmd" : "hevy-agents-mcp";
 	const binaryPath = join(installDir, "node_modules", ".bin", binaryName);
 	for (const [flag, pattern] of [
-		["--help", /Usage:\s*\n\s*hevy-mcp/u],
-		["--version", /^hevy-mcp v\S+/mu],
+		["--help", /Usage:\s*\n\s*hevy-agents-mcp/u],
+		["--version", /^hevy-agents-mcp v\S+/mu],
 	]) {
 		const cliCheck = spawnSync(binaryPath, [flag], {
 			cwd: installDir,
@@ -244,7 +245,7 @@ try {
 		process.execPath,
 		[
 			"-e",
-			"import('hevy-mcp').then(({createNodeMcpServer,runStdioServer}) => { if (typeof createNodeMcpServer !== 'function' || typeof runStdioServer !== 'function') process.exit(1); })",
+			"import('hevy-agents-mcp').then(({createNodeMcpServer,runStdioServer}) => { if (typeof createNodeMcpServer !== 'function' || typeof runStdioServer !== 'function') process.exit(1); })",
 		],
 		{ cwd: installDir, encoding: "utf8" },
 	);

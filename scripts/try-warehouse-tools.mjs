@@ -99,16 +99,16 @@ const write = await client.callTool({
 	name: "run-training-query",
 	arguments: { sql: "DELETE FROM workout" },
 });
-console.log(`isError: ${write.isError}`);
-console.log(write.content?.map((c) => c.text).join("\n"));
+console.log(`isError: ${String(write.isError)}`);
+console.log(write.content?.map((c) => (typeof c.text === "string" ? c.text : JSON.stringify(c))).join("\n"));
 
 heading("GUARD: PRAGMA must be refused");
 const pragma = await client.callTool({
 	name: "run-training-query",
 	arguments: { sql: "PRAGMA table_list" },
 });
-console.log(`isError: ${pragma.isError}`);
-console.log(pragma.content?.map((c) => c.text).join("\n"));
+console.log(`isError: ${String(pragma.isError)}`);
+console.log(pragma.content?.map((c) => (typeof c.text === "string" ? c.text : JSON.stringify(c))).join("\n"));
 
 heading("GUARD: row cap");
 const capped = await call("run-training-query", {

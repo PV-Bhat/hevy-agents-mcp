@@ -284,6 +284,6 @@ if (!run) {
 }
 
 run().catch((error: unknown) => {
-	console.error(`\nfailed: ${error instanceof Error ? error.message : error}`);
+	console.error(`\nfailed: ${error instanceof Error ? error.message : String(error)}`);
 	process.exit(1);
 });
