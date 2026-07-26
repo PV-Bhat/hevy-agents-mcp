@@ -85,7 +85,7 @@ const invalidManifestCases: Array<
 		(manifest) => {
 			manifest.packages[0].environmentVariables = [];
 		},
-		"server.json package must declare exactly one environment variable",
+		"server.json package must declare environment variables",
 	],
 	[
 		"invalid API key metadata",

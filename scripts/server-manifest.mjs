@@ -78,7 +78,7 @@ function validateManifestShape(manifest) {
 	);
 	assert(
 		manifest.description ===
-			"Query your entire Hevy training history as a local SQL database, and manage routines and exercise templates.",
+			"Agent-native Hevy connector: full training history as a private local SQL warehouse, plus safe routine and template tools.",
 		"server.json has an unexpected description",
 	);
 	assert(
@@ -102,17 +102,40 @@ function validateManifestShape(manifest) {
 	);
 	assert(
 		Array.isArray(packageEntry.environmentVariables) &&
-			packageEntry.environmentVariables.length === 1,
-		"server.json package must declare exactly one environment variable",
+			packageEntry.environmentVariables.length >= 1,
+		"server.json package must declare environment variables",
 	);
 
-	const [apiKey] = packageEntry.environmentVariables;
+	const envByName = new Map(
+		packageEntry.environmentVariables.map((entry) => [entry.name, entry]),
+	);
+	const apiKey = envByName.get("HEVY_API_KEY");
 	assert(
-		apiKey.name === "HEVY_API_KEY" &&
+		apiKey &&
 			apiKey.description === "API key for authenticating with the Hevy API" &&
 			apiKey.isRequired === true &&
 			apiKey.isSecret === true,
 		"server.json has unexpected HEVY_API_KEY metadata",
+	);
+
+	const warehouseDb = envByName.get("HEVY_WAREHOUSE_DB");
+	assert(
+		warehouseDb &&
+			warehouseDb.description ===
+				"Path to the local SQLite warehouse, or auto for ~/.hevy-agents-mcp/hevy-warehouse.db" &&
+			warehouseDb.isRequired === false &&
+			warehouseDb.isSecret === false,
+		"server.json has unexpected HEVY_WAREHOUSE_DB metadata",
+	);
+
+	const warehouseTz = envByName.get("HEVY_WAREHOUSE_TZ");
+	assert(
+		warehouseTz &&
+			warehouseTz.description ===
+				"IANA timezone for day and week bucketing" &&
+			warehouseTz.isRequired === false &&
+			warehouseTz.isSecret === false,
+		"server.json has unexpected HEVY_WAREHOUSE_TZ metadata",
 	);
 }
 

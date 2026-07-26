@@ -1,4 +1,4 @@
-import { readFile, readdir } from "node:fs/promises";
+﻿import { readFile, readdir } from "node:fs/promises";
 import { resolve } from "node:path";
 
 const root = resolve(import.meta.dirname, "..");
@@ -7,6 +7,7 @@ const changesetRoot = resolve(root, ".changeset");
 const privatePackages = new Set([
 	"@hevy-mcp/hevy-client",
 	"@hevy-mcp/core",
+	"@hevy-mcp/warehouse",
 	"@hevy-mcp/worker",
 ]);
 
@@ -19,9 +20,9 @@ for (const entry of workspaceEntries) {
 	if (packageJson.private !== true) publishable.push(packageJson.name);
 }
 
-if (publishable.length !== 1 || publishable[0] !== "hevy-mcp") {
+if (publishable.length !== 1 || publishable[0] !== "hevy-agents-mcp") {
 	throw new Error(
-		`Expected only hevy-mcp to be publishable; found ${publishable.join(", ") || "none"}`,
+		`Expected only hevy-agents-mcp to be publishable; found ${publishable.join(", ") || "none"}`,
 	);
 }
 
@@ -38,4 +39,4 @@ for (const entry of changesetEntries) {
 	}
 }
 
-console.log("Release candidates are limited to hevy-mcp.");
+console.log("Release candidates are limited to hevy-agents-mcp.");

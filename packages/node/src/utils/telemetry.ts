@@ -38,7 +38,7 @@ declare const __HEVY_MCP_BUILD__: boolean | undefined;
 declare const __OTEL_COLLECTOR_TOKEN__: string | undefined;
 
 const name =
-	typeof __HEVY_MCP_NAME__ === "string" ? __HEVY_MCP_NAME__ : "hevy-mcp";
+	typeof __HEVY_MCP_NAME__ === "string" ? __HEVY_MCP_NAME__ : "hevy-agents-mcp";
 const version =
 	typeof __HEVY_MCP_VERSION__ === "string" ? __HEVY_MCP_VERSION__ : "dev";
 const telemetryDisabled = process.env.HEVY_MCP_TELEMETRY === "0";

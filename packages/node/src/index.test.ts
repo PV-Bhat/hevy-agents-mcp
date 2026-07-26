@@ -55,7 +55,7 @@ vi.mock("./utils/telemetry.js", () => ({
 			return callback(testDoubles.span);
 		}),
 	},
-	serviceName: "hevy-mcp",
+	serviceName: "hevy-agents-mcp",
 	serviceVersion: "3.4.1",
 	setCurrentUserHash: testDoubles.setCurrentUserHash,
 }));
@@ -248,7 +248,7 @@ describe("Node package entrypoint", () => {
 
 			await runStdioServer();
 
-			expect(console.error).toHaveBeenCalledWith("hevy-mcp v3.4.1");
+			expect(console.error).toHaveBeenCalledWith("hevy-agents-mcp v3.4.1");
 			expect(testDoubles.serverStartups.add).not.toHaveBeenCalled();
 			expect(testDoubles.createHevyClient).not.toHaveBeenCalled();
 		},
@@ -267,7 +267,7 @@ describe("Node package entrypoint", () => {
 			testDoubles.transport,
 		);
 		expect(testDoubles.scheduleUpdateCheck).toHaveBeenCalledWith({
-			packageName: "hevy-mcp",
+			packageName: "hevy-agents-mcp",
 			currentVersion: "3.4.1",
 		});
 		expect(testDoubles.installGracefulShutdown).toHaveBeenCalledWith(

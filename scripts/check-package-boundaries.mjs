@@ -75,12 +75,12 @@ export const packageRules = new Map([
 ]);
 
 // Keep this list aligned with the actual workspace package names. The Node
-// workspace is public and is therefore intentionally named `hevy-mcp`, not
+// workspace is public and is therefore intentionally named `hevy-agents-mcp`, not
 // `@hevy-mcp/node`.
 const internalPackages = [
 	"@hevy-mcp/hevy-client",
 	"@hevy-mcp/core",
-	"hevy-mcp",
+	"hevy-agents-mcp",
 	"@hevy-mcp/worker",
 	"@hevy-mcp/warehouse",
 ];

@@ -4,7 +4,7 @@ import { checkForUpdate, scheduleUpdateCheck } from "./version-check.js";
 const NOW = Date.UTC(2026, 6, 10, 12);
 const DAY_MS = 24 * 60 * 60 * 1_000;
 const OPTIONS = {
-	packageName: "hevy-mcp",
+	packageName: "hevy-agents-mcp",
 	currentVersion: "1.0.0",
 };
 
@@ -51,7 +51,7 @@ describe("checkForUpdate", () => {
 		await checkForUpdate(OPTIONS, dependencies);
 
 		expect(dependencies.readFile).toHaveBeenCalledWith(
-			"/test-cache/hevy-mcp/update-check.json",
+			"/test-cache/hevy-agents-mcp/update-check.json",
 			"utf8",
 		);
 		expect(dependencies.fetch).not.toHaveBeenCalled();
@@ -65,7 +65,7 @@ describe("checkForUpdate", () => {
 		await checkForUpdate(OPTIONS, dependencies);
 
 		expect(dependencies.readFile).toHaveBeenCalledWith(
-			"/home/test-user/.cache/hevy-mcp/update-check.json",
+			"/home/test-user/.cache/hevy-agents-mcp/update-check.json",
 			"utf8",
 		);
 	});
@@ -109,7 +109,7 @@ describe("checkForUpdate", () => {
 		await checkForUpdate(OPTIONS, dependencies);
 
 		expect(dependencies.fetch).toHaveBeenCalledWith(
-			"https://registry.npmjs.org/hevy-mcp",
+			"https://registry.npmjs.org/hevy-agents-mcp",
 			expect.objectContaining({
 				headers: {
 					Accept: "application/vnd.npm.install-v1+json",
@@ -148,9 +148,9 @@ describe("checkForUpdate", () => {
 		await checkForUpdate(OPTIONS, dependencies);
 
 		const temporaryPath =
-			"/test-cache/hevy-mcp/update-check.json.12345." +
+			"/test-cache/hevy-agents-mcp/update-check.json.12345." +
 			"00000000-0000-4000-8000-000000000000.tmp";
-		expect(dependencies.mkdir).toHaveBeenCalledWith("/test-cache/hevy-mcp", {
+		expect(dependencies.mkdir).toHaveBeenCalledWith("/test-cache/hevy-agents-mcp", {
 			recursive: true,
 		});
 		expect(dependencies.writeFile).toHaveBeenCalledWith(
@@ -160,7 +160,7 @@ describe("checkForUpdate", () => {
 		);
 		expect(dependencies.rename).toHaveBeenCalledWith(
 			temporaryPath,
-			"/test-cache/hevy-mcp/update-check.json",
+			"/test-cache/hevy-agents-mcp/update-check.json",
 		);
 	});
 
@@ -168,7 +168,7 @@ describe("checkForUpdate", () => {
 		const dependencies = createDependencies();
 		dependencies.rename.mockRejectedValue(new Error("target exists"));
 		const temporaryPath =
-			"/test-cache/hevy-mcp/update-check.json.12345." +
+			"/test-cache/hevy-agents-mcp/update-check.json.12345." +
 			"00000000-0000-4000-8000-000000000000.tmp";
 		const payload = `${JSON.stringify({
 			checkedAt: NOW,
@@ -185,7 +185,7 @@ describe("checkForUpdate", () => {
 		);
 		expect(dependencies.writeFile).toHaveBeenNthCalledWith(
 			2,
-			"/test-cache/hevy-mcp/update-check.json",
+			"/test-cache/hevy-agents-mcp/update-check.json",
 			payload,
 			"utf8",
 		);
@@ -200,7 +200,7 @@ describe("checkForUpdate", () => {
 			.mockResolvedValueOnce(undefined)
 			.mockRejectedValueOnce(new Error("fallback denied"));
 		const temporaryPath =
-			"/test-cache/hevy-mcp/update-check.json.12345." +
+			"/test-cache/hevy-agents-mcp/update-check.json.12345." +
 			"00000000-0000-4000-8000-000000000000.tmp";
 
 		await expect(
@@ -239,7 +239,7 @@ describe("checkForUpdate", () => {
 			dependencies.fetch.mockResolvedValue(registryResponse(latestVersion));
 
 			await checkForUpdate(
-				{ packageName: "hevy-mcp", currentVersion },
+				{ packageName: "hevy-agents-mcp", currentVersion },
 				dependencies,
 			);
 
@@ -254,7 +254,7 @@ describe("checkForUpdate", () => {
 		dependencies.fetch.mockResolvedValue(registryResponse("1.28.0"));
 
 		await checkForUpdate(
-			{ packageName: "hevy-mcp", currentVersion: "1.25.9" },
+			{ packageName: "hevy-agents-mcp", currentVersion: "1.25.9" },
 			dependencies,
 		);
 
@@ -262,14 +262,14 @@ describe("checkForUpdate", () => {
 		expect(notice).toContain("current 1.25.9");
 		expect(notice).toContain("latest 1.28.0");
 		expect(notice).toMatch(/more than two minor versions/i);
-		expect(notice).toContain("npm install -g hevy-mcp@latest");
+		expect(notice).toContain("npm install -g hevy-agents-mcp@latest");
 	});
 
 	it("skips invalid local versions without cache or network work", async () => {
 		const dependencies = createDependencies();
 
 		await checkForUpdate(
-			{ packageName: "hevy-mcp", currentVersion: "dev" },
+			{ packageName: "hevy-agents-mcp", currentVersion: "dev" },
 			dependencies,
 		);
 

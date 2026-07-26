@@ -63,7 +63,7 @@ describe("package boundary AST checker", () => {
 
 	it("rejects the public Node package from runtime-neutral packages", () => {
 		const failures = findImportViolations({
-			source: `import "hevy-mcp";`,
+			source: `import "hevy-agents-mcp";`,
 			file: "/repo/packages/core/src/file.ts",
 			fileName: "file.ts",
 			relativePackage: "packages/core",
@@ -71,7 +71,7 @@ describe("package boundary AST checker", () => {
 			rule: coreRule,
 		});
 		expect(failures).toEqual([
-			"packages/core: forbidden internal import: hevy-mcp",
+			"packages/core: forbidden internal import: hevy-agents-mcp",
 		]);
 	});
 
